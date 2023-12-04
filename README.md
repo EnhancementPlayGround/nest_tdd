@@ -7,7 +7,7 @@
 
 ### STEPS
 
-- [ ] STEP01 웹 서버 생성
+- [x] STEP01 웹 서버 생성
 - [ ] STEP02 빌드 환경 구축
 - [ ] STEP03 배포 환경 구축
 
@@ -16,6 +16,7 @@
 #### NestJS
 
 - 헬스체크: `@nestjs/terminus`
+- 환경설정: `@nestjs/config`
 
 #### Swagger Docs
 
