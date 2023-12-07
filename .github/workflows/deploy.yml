@@ -31,7 +31,7 @@ on:
     branches: ['main']
 
 env:
-  AWS_REGION: ap-northeast-2
+  AWS_REGION: us-east-1
   ECR_REPOSITORY: pipeline
   ECS_SERVICE: dusuna-pipeline-service
   ECS_CLUSTER: dusuna-pipeline-cluster
@@ -39,8 +39,8 @@ env:
   CONTAINER_NAME: pipeline-container
 
 permissions:
-  contents: read
   id-token: write
+  contents: read
 
 jobs:
   deploy:
@@ -55,7 +55,7 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v3
         with:
-          aws-region: ap-northeast-2
+          aws-region: us-east-1
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
 
       - name: Login to Amazon ECR
