@@ -1,0 +1,35 @@
+name: Dockerizing to Vultr
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy to Vultr
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup SSH and SCP Actions
+        uses: webfactory/ssh-agent@v0.5.1
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Build Docker Image
+        run: |
+          docker build -t ${{ env.IMAGE_NAME }} .
+          docker save ${{ env.IMAGE_NAME }} | gzip > ${{ env.IMAGE_NAME }}.tar.gz
+
+      - name: Copy Image to Vultr Server
+        run: |
+          scp ${{ env.IMAGE_NAME }}.tar.gz ${{ env.VULTR_USER }}@${{ env.VULTR_IP }}:/tmp
+
+      - name: Load Image on Vultr Server and Run
+        run: |
+          ssh ${{ env.VULTR_USER }}@${{ env.VULTR_IP }} 'docker load < /tmp/${{ env.IMAGE_NAME }}.tar.gz'
+          ssh ${{ env.VULTR_USER }}@${{ env.VULTR_IP }} 'docker run -p 3000:3003 -d ${{ env.IMAGE_NAME }}'
