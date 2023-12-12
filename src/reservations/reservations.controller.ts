@@ -16,7 +16,7 @@ export class ReservationsController {
     const seats = await this.reservationsService.getAvailableSeats(
       new Date(date),
     );
-    return { seats };
+    return { seats: seats.split(',') };
   }
 
   @Get('seats/:date/init')
