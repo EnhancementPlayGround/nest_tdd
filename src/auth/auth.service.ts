@@ -7,6 +7,7 @@ import {
 import { promisify } from 'util';
 import { scrypt as _scrypt, randomBytes } from 'crypto';
 import { Cron } from '@nestjs/schedule';
+import AsyncLock from 'async-lock';
 
 import { User } from 'src/entities/user.entity';
 import { UsersService } from 'src/users/users.service';
@@ -24,10 +25,12 @@ export class AuthService {
     private usersService: UsersService,
     private jwtService: JwtService,
   ) {}
+
+  private lock = new AsyncLock();
   private readonly MAX_QUEUE_SIZE = 50;
+  private currentQueueSize = 0;
   private queueIssuedIds: Set<string> = new Set();
   private idAndTokenExpiryMap: Map<string, number> = new Map();
-  private currentQueueSize = 0;
 
   async signup(body: Partial<User>) {
     const { email, password } = body;
@@ -96,19 +99,13 @@ export class AuthService {
   // ----------------------------------------------------------------
   // Queue management
   inQueue(): number {
-    if (this.currentQueueSize >= this.MAX_QUEUE_SIZE) {
-      throw new Error('Queue is full');
-    }
     return ++this.currentQueueSize;
   }
 
-  calcRemainingTime(myQueue: number): number {
-    if (this.currentQueueSize === 0) return 0;
-    return (this.currentQueueSize - myQueue) * 3;
-  }
-
-  getCurrentQueueSize(): number {
-    return this.currentQueueSize;
+  getRemainQueueSize(myQueue: number): number {
+    const queueLeft = this.currentQueueSize - this.MAX_QUEUE_SIZE - myQueue;
+    if (queueLeft <= 0) return 0;
+    return queueLeft;
   }
 
   outQueue(userId: string): void {
@@ -117,27 +114,39 @@ export class AuthService {
   }
 
   /** 대기 큐 토큰 발급 */
-  generateQueueToken(userId: string) {
-    if (this.queueIssuedIds.has(userId)) {
-      throw new BadRequestException('User already has a queue token');
+  async generateQueueToken(userId: string) {
+    try {
+      return this.lock.acquire('queue-lock', async () => {
+        if (this.queueIssuedIds.has(userId)) {
+          throw new BadRequestException('User already has a queue token');
+        }
+
+        const newQueue = this.inQueue();
+        const remainQueueSize = this.getRemainQueueSize(newQueue);
+        const remainingMinute = remainQueueSize * 3;
+        const payload = {
+          userId,
+          myQueue: newQueue,
+          remainingMinute,
+        };
+
+        const expiresIn = 5 * 60 * 1000;
+        const expiryTime = new Date().getTime() + expiresIn;
+
+        this.queueIssuedIds.add(userId);
+        this.idAndTokenExpiryMap.set(userId, expiryTime);
+
+        return {
+          queue_token: this.jwtService.sign(payload, { expiresIn: '5m' }),
+          remainQueueSize,
+          remainingMinute,
+          myQueue: newQueue,
+        };
+      });
+    } catch (e) {
+      console.error('Error acquiring lock in generateQueueToken:', e);
+      throw new BadRequestException('Error processing request');
     }
-
-    const newQueue = this.inQueue();
-    const remainingTime = this.calcRemainingTime(newQueue);
-    const payload = { userId, myQueue: newQueue, remainingTime };
-
-    const expiresIn = 5 * 60 * 1000;
-    const expiryTime = new Date().getTime() + expiresIn;
-
-    this.queueIssuedIds.add(userId);
-    this.idAndTokenExpiryMap.set(userId, expiryTime);
-
-    return {
-      queue_token: this.jwtService.sign(payload, { expiresIn: '5m' }),
-      currentQueueSize: this.currentQueueSize,
-      remainingTime: this.calcRemainingTime(newQueue),
-      myQueue: newQueue,
-    };
   }
 
   /** 토큰 확인 */
@@ -146,12 +155,11 @@ export class AuthService {
       const decoded = this.decodeQueueToken(token);
 
       const userQueue = decoded.myQueue;
-      const currentQueueSize = this.getCurrentQueueSize();
-      const currentRemaining = this.calcRemainingTime(userQueue);
+      const remainQueueSize = this.getRemainQueueSize(userQueue);
 
       return {
-        currentQueueSize,
-        remainingTime: currentRemaining,
+        remainQueueSize,
+        remainingMinute: remainQueueSize * 3,
         myQueue: userQueue,
       };
     } catch (e) {
@@ -161,14 +169,20 @@ export class AuthService {
 
   /** 만료 토큰 삭제 */
   @Cron('*/30 * * * * *')
-  handleExpiredQueueTokens() {
-    const currentTime = new Date().getTime();
+  async handleExpiredQueueTokens() {
+    try {
+      await this.lock.acquire('queue-lock', async () => {
+        const currentTime = new Date().getTime();
 
-    this.idAndTokenExpiryMap.forEach((expiryTime, userId) => {
-      if (currentTime >= expiryTime) {
-        this.outQueue(userId);
-        this.idAndTokenExpiryMap.delete(userId);
-      }
-    });
+        this.idAndTokenExpiryMap.forEach((expiryTime, userId) => {
+          if (currentTime >= expiryTime) {
+            this.outQueue(userId);
+            this.idAndTokenExpiryMap.delete(userId);
+          }
+        });
+      });
+    } catch (e) {
+      console.error('Error acquiring lock in handleExpiredQueueTokens:', e);
+    }
   }
 }
