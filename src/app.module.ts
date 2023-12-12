@@ -1,15 +1,15 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import * as Joi from 'joi';
+import { ScheduleModule } from '@nestjs/schedule';
 
 import configuration from './config/configuration';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { HealthModule } from './health/health.module';
-// import { AuthModule } from './auth/auth.module';
-import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
+import { HealthModule } from './health/health.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -25,6 +25,7 @@ import { AuthModule } from './auth/auth.module';
       load: [configuration],
       envFilePath: `src/config/env/.${process.env.NODE_ENV}.env`,
     }),
+    ScheduleModule.forRoot(),
     AuthModule,
     UsersModule,
   ],
