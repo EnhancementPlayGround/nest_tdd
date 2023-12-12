@@ -6,6 +6,9 @@ import {
   Patch,
   Param,
   Delete,
+  UseGuards,
+  Req,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { serialize } from 'src/interceptors/serialize.interceptor';
 
@@ -14,6 +17,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserDto } from './dto/user.dto';
 import { ApiTags } from '@nestjs/swagger';
+import { JwtAuthGuard } from 'src/auth/jwt-auth.guards';
 
 @Controller('users')
 @ApiTags('👩‍👩‍👧‍👦 users')
@@ -31,18 +35,42 @@ export class UsersController {
     return this.usersService.findAll({});
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  findOne(@Req() req, @Param('id') id: string) {
+    const userId = req.user.userId;
+    if (userId !== id)
+      new UnauthorizedException(
+        'User ' + userId + ' is not authorized to get this user information',
+      );
     return this.usersService.findOne(id);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
+  update(
+    @Req() req,
+    @Param('id') id: string,
+    @Body() updateUserDto: UpdateUserDto,
+  ) {
+    const userId = req.user.userId;
+    if (userId !== id)
+      new UnauthorizedException(
+        'User ' + userId + ' is not authorized to update this user',
+      );
+
     return this.usersService.update(id, updateUserDto);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  remove(@Param('id') id: string) {
+  remove(@Req() req, @Param('id') id: string) {
+    const userId = req.user.userId;
+    if (userId !== id)
+      new UnauthorizedException(
+        'User ' + userId + ' is not authorized to delete this user',
+      );
+
     return this.usersService.remove(id);
   }
 }
