@@ -20,6 +20,10 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
+      - name: Test SSH Connection
+        run: |
+          ssh ${{ env.VULTR_USER }}@${{ env.VULTR_IP }} 'ls -la'
+
       - name: Build Docker Image
         run: |
           docker build -t ${{ env.IMAGE_NAME }} .
