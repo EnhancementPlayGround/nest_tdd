@@ -2,7 +2,6 @@ import {
   Controller,
   Post,
   Body,
-  Session,
   HttpCode,
   HttpStatus,
   UseGuards,
@@ -22,10 +21,8 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('signup')
-  async signup(@Body() body: SignupAuthDto, @Session() session: any) {
+  async signup(@Body() body: SignupAuthDto) {
     const user = await this.authService.signup(body);
-    session.userId = user.id;
-    console.log(session.userId);
     return user;
   }
 
