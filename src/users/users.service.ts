@@ -14,15 +14,15 @@ import { SerializeInterceptor } from 'src/interceptors/serialize.interceptor';
 export class UsersService {
   constructor(
     @Inject('USER_REPOSITORY')
-    private _userRepository: Repository<User>,
+    private userRepository: Repository<User>,
   ) {}
 
   async create(body: Partial<User>): Promise<User> {
-    const result = this._userRepository.create({
+    const result = this.userRepository.create({
       ...body,
       created_at: new Date(),
     });
-    this._userRepository.save(result);
+    this.userRepository.save(result);
 
     return result;
   }
@@ -30,11 +30,11 @@ export class UsersService {
   async findOne(id: string): Promise<User> {
     if (!id) return null;
 
-    return this._userRepository.findOneBy({ id });
+    return this.userRepository.findOneBy({ id });
   }
 
   async findAll({ email, username }: Partial<User>): Promise<User[]> {
-    const queryBuilder = this._userRepository.createQueryBuilder('users');
+    const queryBuilder = this.userRepository.createQueryBuilder('users');
 
     if (email) {
       queryBuilder.andWhere('users.email = :email', { email });
@@ -48,17 +48,17 @@ export class UsersService {
   }
 
   async update(id: string, attr: Partial<User>): Promise<User> {
-    const user = await this._userRepository.findOneBy({ id });
+    const user = await this.userRepository.findOneBy({ id });
     if (!user) throw new NotFoundException(`User ${id} not found`);
 
     Object.assign(user, attr);
 
-    return this._userRepository.save(user);
+    return this.userRepository.save(user);
   }
 
   async remove(id: string): Promise<void> {
     const user = await this.findOne(id);
     if (!user) throw new NotFoundException(`User ${id} not found`);
-    this._userRepository.remove(user);
+    this.userRepository.remove(user);
   }
 }

@@ -53,6 +53,9 @@ dependencies:
   cross-env:
     specifier: ^7.0.3
     version: 7.0.3
+  date-fns:
+    specifier: ^2.30.0
+    version: 2.30.0
   joi:
     specifier: ^17.11.0
     version: 17.11.0
