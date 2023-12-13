@@ -4,15 +4,16 @@ import {
   Injectable,
   NotAcceptableException,
 } from '@nestjs/common';
+import { In, Repository } from 'typeorm';
 import { promisify } from 'util';
 import { scrypt as _scrypt, randomBytes } from 'crypto';
 import { Cron } from '@nestjs/schedule';
 import AsyncLock from 'async-lock';
 
 import { User } from 'src/entities/user.entity';
+import { Auth } from 'src/entities/auth.entity';
 import { UsersService } from 'src/users/users.service';
 import { JwtService } from '@nestjs/jwt';
-import { Repository } from 'typeorm';
 import { jwtConstants } from 'src/constatns/jwt';
 
 const scrypt = promisify(_scrypt);
@@ -22,15 +23,17 @@ export class AuthService {
   constructor(
     @Inject('USER_REPOSITORY')
     private usersRepository: Repository<User>,
+    @Inject('AUTH_REPOSITORY')
+    private authRepository: Repository<Auth>,
+
     private usersService: UsersService,
     private jwtService: JwtService,
   ) {}
 
+  private queue: string[] = [];
+  private idAndTokenExpiryMap: Map<string, number> = new Map();
   private lock = new AsyncLock();
   private readonly MAX_QUEUE_SIZE = 50;
-  private currentQueueSize = 0;
-  private queueIssuedIds: Set<string> = new Set();
-  private idAndTokenExpiryMap: Map<string, number> = new Map();
 
   async signup(body: Partial<User>) {
     const { email, password } = body;
@@ -98,49 +101,65 @@ export class AuthService {
 
   // ----------------------------------------------------------------
   // Queue management
-  inQueue(): number {
-    return ++this.currentQueueSize;
+  inQueue(userId: string): boolean {
+    if (!this.queue.includes(userId)) {
+      this.queue.push(userId);
+      return true;
+    } else {
+      return false;
+    }
   }
 
-  getRemainQueueSize(myQueue: number): number {
-    const queueLeft = this.currentQueueSize - this.MAX_QUEUE_SIZE - myQueue;
+  getRemainQueueSize(): number {
+    const queueLeft = this.queue.length - this.MAX_QUEUE_SIZE - 1;
     if (queueLeft <= 0) return 0;
     return queueLeft;
   }
 
-  outQueue(userId: string): void {
-    this.currentQueueSize = Math.max(0, this.currentQueueSize - 1);
-    this.queueIssuedIds.delete(userId);
+  outQueue(userId?: string) {
+    if (userId) {
+      const index = this.queue.indexOf(userId);
+      this.queue = this.queue.slice(index, 1);
+    } else {
+      this.queue.shift();
+    }
   }
 
   /** 대기 큐 토큰 발급 */
   async generateQueueToken(userId: string) {
     try {
       return this.lock.acquire('queue-lock', async () => {
-        if (this.queueIssuedIds.has(userId)) {
+        if (this.queue.includes(userId)) {
           throw new BadRequestException('User already has a queue token');
         }
 
-        const newQueue = this.inQueue();
-        const remainQueueSize = this.getRemainQueueSize(newQueue);
+        this.inQueue(userId);
+        const myQueue = this.queue.indexOf(userId);
+        const remainQueueSize = this.getRemainQueueSize();
         const remainingMinute = remainQueueSize * 3;
         const payload = {
           userId,
-          myQueue: newQueue,
+          myQueue,
           remainingMinute,
         };
 
         const expiresIn = 5 * 60 * 1000;
         const expiryTime = new Date().getTime() + expiresIn;
 
-        this.queueIssuedIds.add(userId);
         this.idAndTokenExpiryMap.set(userId, expiryTime);
 
+        const queueToken = this.jwtService.sign(payload, { expiresIn: '5m' });
+
+        await this.authRepository.save({
+          userId,
+          queueToken,
+        });
+
         return {
-          queue_token: this.jwtService.sign(payload, { expiresIn: '5m' }),
+          queue_token: queueToken,
           remainQueueSize,
           remainingMinute,
-          myQueue: newQueue,
+          myQueue,
         };
       });
     } catch (e) {
@@ -154,13 +173,13 @@ export class AuthService {
     try {
       const decoded = this.decodeQueueToken(token);
 
-      const userQueue = decoded.myQueue;
-      const remainQueueSize = this.getRemainQueueSize(userQueue);
+      const myQueue = this.queue.indexOf(decoded.userId);
+      const remainQueueSize = this.getRemainQueueSize();
 
       return {
         remainQueueSize,
         remainingMinute: remainQueueSize * 3,
-        myQueue: userQueue,
+        myQueue,
       };
     } catch (e) {
       throw new BadRequestException(e.message);
@@ -168,17 +187,31 @@ export class AuthService {
   }
 
   /** 만료 토큰 삭제 */
-  @Cron('*/30 * * * * *')
+  @Cron('*/2 * * * * *')
   async handleExpiredQueueTokens() {
     try {
       await this.lock.acquire('queue-lock', async () => {
         const currentTime = new Date().getTime();
+        const expiredUserIds: string[] = [];
 
         this.idAndTokenExpiryMap.forEach((expiryTime, userId) => {
           if (currentTime >= expiryTime) {
-            this.outQueue(userId);
-            this.idAndTokenExpiryMap.delete(userId);
+            expiredUserIds.push(userId);
           }
+        });
+
+        if (expiredUserIds.length > 0) {
+          const expiredAuths = await this.authRepository.find({
+            where: { userId: In(expiredUserIds) },
+          });
+          for (const auth of expiredAuths) {
+            await this.authRepository.remove(auth);
+          }
+        }
+
+        expiredUserIds.forEach((userId) => {
+          this.outQueue(userId);
+          this.idAndTokenExpiryMap.delete(userId);
         });
       });
     } catch (e) {
