@@ -119,7 +119,9 @@ export class AuthService {
   outQueue(userId?: string) {
     if (userId) {
       const index = this.queue.indexOf(userId);
-      this.queue = this.queue.slice(index, 1);
+      if (index > -1) {
+        this.queue.splice(index, 1);
+      }
     } else {
       this.queue.shift();
     }
