@@ -10,11 +10,11 @@ import { scrypt as _scrypt, randomBytes } from 'crypto';
 import { Cron } from '@nestjs/schedule';
 import AsyncLock from 'async-lock';
 
-import { User } from 'src/entities/user.entity';
-import { Auth } from 'src/entities/auth.entity';
-import { UsersService } from 'src/users/users.service';
+import { User } from '@/entities/user.entity';
+import { Auth } from '@/entities/auth.entity';
+import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
-import { jwtConstants } from 'src/constatns/jwt';
+import { jwtConstants } from '@/constatns/jwt';
 
 const scrypt = promisify(_scrypt);
 

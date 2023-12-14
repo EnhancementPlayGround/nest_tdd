@@ -1,7 +1,7 @@
 import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { addDays, endOfWeek, format, startOfWeek } from 'date-fns';
 import { Repository } from 'typeorm';
-import { Reservations } from 'src/entities/reservations.entity';
+import { Reservations } from '@/entities/reservations.entity';
 
 @Injectable()
 export class ReservationsService {

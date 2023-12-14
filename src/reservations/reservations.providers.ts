@@ -1,5 +1,5 @@
 import { DataSource } from 'typeorm';
-import { Reservations } from 'src/entities/reservations.entity';
+import { Reservations } from '@/entities/reservations.entity';
 
 export const reservationsProviders = [
   {

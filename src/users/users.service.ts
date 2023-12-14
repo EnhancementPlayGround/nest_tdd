@@ -5,9 +5,9 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { Repository } from 'typeorm';
+import { SerializeInterceptor } from '@/interceptors/serialize.interceptor';
 
-import { User } from 'src/entities/user.entity';
-import { SerializeInterceptor } from 'src/interceptors/serialize.interceptor';
+import { User } from '@/entities/user.entity';
 
 @Injectable()
 @UseInterceptors(SerializeInterceptor)

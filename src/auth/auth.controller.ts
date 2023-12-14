@@ -10,9 +10,9 @@ import {
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 
+import { User } from '@/entities/user.entity';
 import { AuthService } from './auth.service';
 import { SignupAuthDto } from './dto/signup-auth.dto';
-import { User } from 'src/entities/user.entity';
 import { JwtAuthGuard } from './jwt-auth.guards';
 
 @Controller('auth')
