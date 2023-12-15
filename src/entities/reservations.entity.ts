@@ -17,6 +17,14 @@ export class Reservations {
   @Column()
   availableSeats: string;
 
+  @Column({ type: 'json', nullable: true })
+  temporaryHolds: {
+    [seatNumber: number]: {
+      userId: string;
+      releaseTime: Date;
+    };
+  };
+
   @Column('datetime')
   created_at: Date;
 

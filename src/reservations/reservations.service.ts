@@ -1,6 +1,16 @@
-import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
-import { addDays, endOfWeek, format, startOfWeek } from 'date-fns';
+import {
+  BadRequestException,
+  HttpException,
+  HttpStatus,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Repository } from 'typeorm';
+import { Cron } from '@nestjs/schedule';
+import { addDays, endOfWeek, format, startOfWeek } from 'date-fns';
+
+import { Auth } from '@/entities/auth.entity';
 import { Reservations } from '@/entities/reservations.entity';
 
 @Injectable()
@@ -8,8 +18,12 @@ export class ReservationsService {
   constructor(
     @Inject('RESERVATIONS_REPOSITORY')
     private reservationsRepository: Repository<Reservations>,
+    @Inject('AUTH_REPOSITORY')
+    private authRepository: Repository<Auth>,
   ) {}
 
+  //-----------------------------------------------
+  // 예약가능 좌석 / 가용좌석 available seats
   async getAvailableDates(): Promise<string[]> {
     const availableDates = await this.reservationsRepository.query(`
       SELECT DISTINCT date FROM reservations
@@ -69,49 +83,133 @@ export class ReservationsService {
     });
   }
 
-  async reserveSeat(
-    date: string,
-    seatNumber: number,
-    userId: string,
-    queueToken: string,
-  ) {
-    try {
-      if (!this.isSeatAvailable(date, seatNumber)) {
-        throw new Error('Seat is not available');
-      }
+  // -----------------------------------------------
+  // 예약 정보 reservations
+  async reserveSeat({
+    date,
+    seatNumber,
+    userId,
+  }: {
+    date: string;
+    seatNumber: number;
+    userId: string;
+  }) {
+    // 1. 좌석 예약가능 여부 확인
+    if (!(await this.isSeatAvailable(date, seatNumber))) {
+      throw new HttpException('Seat is not available', HttpStatus.BAD_REQUEST);
+    }
 
-      this.setTemporaryHold(date, seatNumber, userId);
+    // 2. 날짜의 예약정보 찾기
+    let reservation = await this.reservationsRepository.findOne({
+      where: { date },
+    });
+    if (!reservation) {
+      throw new NotFoundException(`No reservation found for date ${date}`);
+    }
 
-      // 임시
-      return {
-        date: date,
-        seatNumber: seatNumber,
-        status: 'reserved',
-        temporaryHoldUntil: new Date(Date.now() + 5 * 60000),
-      };
-    } catch (err) {
-      throw new HttpException('Reservation failed', HttpStatus.BAD_REQUEST);
+    // 3. 임시 배정 확인
+    const temporaryHold = reservation.temporaryHolds[seatNumber];
+    if (!temporaryHold || temporaryHold.userId !== userId) {
+      throw new BadRequestException(
+        'No temporary hold for this seat by the user',
+      );
+    }
+
+    // 4. 예약 가능한 좌석에서 해당 좌석 & 임시 배정 정보 삭제
+    const availableSeats = reservation.availableSeats.split(',').map(Number);
+    const seatIndex = availableSeats.indexOf(seatNumber);
+    if (seatIndex > -1) {
+      availableSeats.splice(seatIndex, 1);
+    }
+    reservation.availableSeats = availableSeats.join(',');
+
+    delete reservation.temporaryHolds[seatNumber];
+
+    // 5. 날짜의 예약정보 저장
+    await this.reservationsRepository.save(reservation);
+    return { message: 'Reservation successful' };
+  }
+
+  async isSeatAvailable(date: string, seatNumber: number): Promise<boolean> {
+    const reservation = await this.reservationsRepository.findOne({
+      where: { date },
+    });
+
+    if (reservation) {
+      const availableSeats = reservation.availableSeats.split(',').map(Number);
+      return availableSeats.includes(seatNumber);
+    } else {
+      throw new NotFoundException(`Reservation for date ${date} not found`);
     }
   }
 
-  isSeatAvailable(date: string, seatNumber: number): boolean {
-    // 좌석 예약 가능 여부를 확인하는 로직
-    // 1. 데이터베이스에 해당 날짜와 좌석 번호의 예약완료 여부
-    // 2. 데이터베이스의 해당 날짜와 좌석 번호에 대한 임시 배정 여부
+  // -----------------------------------------------
+  // 임시 배정 temporary hold
+  async setTemporaryHold({
+    date,
+    seatNumber,
+    userId,
+    queueToken,
+  }: {
+    date: string;
+    seatNumber: number;
+    userId: string;
+    queueToken: string;
+  }) {
+    // 1. queueToken 검증
+    const isInQueue = await this.authRepository.findOne({
+      where: { userId, queueToken },
+    });
+    if (!isInQueue) {
+      throw new HttpException('Invalid queue token', HttpStatus.BAD_REQUEST);
+    }
 
-    this.getAvailableSeats(date);
-    return true; // 임시 true
+    // 2. 날짜의 예약정보 찾기
+    const reservation = await this.reservationsRepository.findOne({
+      where: { date },
+    });
+    if (!reservation) {
+      throw new NotFoundException(`Reservation for date ${date} not found`);
+    }
+
+    // 3. userId로 이미 임시 보유된 좌석 여부 확인
+    const alreadyHeldSeat = Object.keys(reservation.temporaryHolds).find(
+      (seat) => reservation.temporaryHolds[seat].userId === userId,
+    );
+
+    // 4. put temporaryHolds
+    if (alreadyHeldSeat) {
+      delete reservation.temporaryHolds[alreadyHeldSeat];
+    }
+    const releaseTime = new Date();
+    releaseTime.setMinutes(releaseTime.getMinutes() + 5);
+
+    reservation.temporaryHolds = {
+      ...reservation.temporaryHolds,
+      [seatNumber]: { userId, releaseTime },
+    };
+
+    // 5. reservation 저장
+    await this.reservationsRepository.save(reservation);
   }
 
-  setTemporaryHold(date: string, seatNumber: number, userId: string) {
-    // 임시 배정
-    // 1. 데이터베이스의 해당 날짜와 좌석 번호에 임시 배정 정보를 저장 (userId, 배정 해제 시각)
-    // 2. 일정 시간 후에 자동으로 배정을 해제
-  }
+  @Cron('*/5 * * * *')
+  async releaseExpiredReservations() {
+    const reservations = await this.reservationsRepository.find();
+    const currentTime = new Date();
 
-  releaseExpiredReservations() {
-    // 배정 해제 로직
-    // - AuthService의 handleExpiredQueueTokens과 같이, Cron 사용
-    // - 특정 시간마다 배정해제 필요 여부를 확인하고, 배정 해제 후 DB를 업데이트 합니다.
+    reservations.forEach(async (reservation) => {
+      if (reservation.temporaryHolds) {
+        Object.keys(reservation.temporaryHolds).forEach((seatNumber) => {
+          const hold = reservation.temporaryHolds[seatNumber];
+
+          if (hold.releaseTime < currentTime) {
+            reservation.availableSeats += `,${seatNumber}`;
+            delete reservation.temporaryHolds[seatNumber];
+          }
+        });
+        await this.reservationsRepository.save(reservation);
+      }
+    });
   }
 }
