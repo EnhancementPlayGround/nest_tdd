@@ -5,7 +5,7 @@ services:
     restart: unless-stopped
     build:
       context: .
-      dockerfile: dockerfile
+      dockerfile: Dockerfile
       # ✨ Target the dev stage
       target: dev
     # Mount host directory to docker container to support watch mode
