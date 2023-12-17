@@ -6,8 +6,8 @@ on:
       - 'main'
 
 env:
-  AWS_REGION: ap-northeast-2
-  ECR_REGISTRY: 371589616781.dkr.ecr.ap-northeast-2.amazonaws.com/nest-prod
+  AWS_REGION: us-east-1
+  ECR_REGISTRY: 371589616781.dkr.ecr.us-east-1.amazonaws.com/nest-prod
   ECR_REPOSITORY: nest-prod
 
 permissions:
@@ -64,11 +64,10 @@ jobs:
         id: build-image
         env:
           ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
-          IMAGE_TAG: prod-${{ github.sha }}
         run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG . --target=prod
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest . --target=prod
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:latest" >> $GITHUB_OUTPUT
 
       - name: Render ECS task-definition
         id: render-task-definition
