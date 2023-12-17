@@ -74,7 +74,7 @@ jobs:
         id: render-task-definition
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
-          task-definition: .taskdefinition/prod-task-definition.json
+          task-definition: .aws/task-definition.json
           container-name: service-prod
           image: ${{ steps.build-image.outputs.image }}
 
@@ -82,6 +82,6 @@ jobs:
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1
         with:
           task-definition: ${{ steps.render-task-definition.outputs.task-definition }}
-          service: hhplus-nestjs-prod
-          cluster: cluster-hhplust-nest-prod
+          service: cluster-nest-prod
+          cluster: nest-prod
           wait-for-service-stability: true

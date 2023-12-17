@@ -1,7 +1,7 @@
 services:
   api:
-    container_name: hhplus-nestjs
-    image: nestjs-dev
+    container_name: nest-container
+    image: nest-dev
     restart: unless-stopped
     build:
       context: .
@@ -17,8 +17,8 @@ services:
     ports:
       - 3000:3000
     networks:
-      - hhplus-net
+      - nest-net
     command: pnpm run start
   # If you need DB, assign here
 networks:
-  hhplus-net:
+  nest-net:
