@@ -47,7 +47,7 @@ jobs:
 
       - name: Debug Credentials
         run: |
-          echo "Not a KEY: ${{ secrets.NOT_A_ACCESS_KEY }}"
+          echo "FOO: ${{ secrets.FOO }}"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
