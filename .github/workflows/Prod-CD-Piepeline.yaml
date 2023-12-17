@@ -49,10 +49,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Debug Credentials
-        run: |
-          echo "FOO: ${{ secrets.FOO }}"
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
