@@ -5,7 +5,7 @@ FROM node:18-alpine as dev
 # alpine missed shared-libraries. so if needed, install here
 RUN apk add --no-cache libc6-compat
 # install and activate pnpm
-RUN enable && corepack prepare pnpm@8.12.0 --activate
+RUN corepack enable && corepack prepare pnpm@8.12.0 --activate
 
 # Create app directory
 WORKDIR /app
