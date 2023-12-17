@@ -6,8 +6,8 @@ on:
       - 'main'
 
 env:
-  AWS_REGION: us-east-1
-  ECR_REGISTRY: 371589616781.dkr.ecr.us-east-1.amazonaws.com/nest-prod
+  AWS_REGION: ap-northeast-2
+  ECR_REGISTRY: 371589616781.dkr.ecr.ap-northeast-2.amazonaws.com/nest-prod
   ECR_REPOSITORY: nest-prod
 
 permissions:
