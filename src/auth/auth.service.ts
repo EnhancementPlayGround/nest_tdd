@@ -7,6 +7,7 @@ import {
 import { In, Repository } from 'typeorm';
 import { promisify } from 'util';
 import { scrypt as _scrypt, randomBytes } from 'crypto';
+import * as bcrypt from 'bcrypt';
 import { Cron } from '@nestjs/schedule';
 import AsyncLock from 'async-lock';
 
@@ -39,27 +40,30 @@ export class AuthService {
     const { email, password } = body;
     const users = await this.usersService.findAll({ email });
 
-    if (users.length)
+    if (users.length) {
       throw new NotAcceptableException('Email is not available');
+    }
 
-    const salt = randomBytes(8).toString('hex');
-    const hash = (await scrypt(password, salt, 32)) as Buffer;
-    const result = salt + '.' + hash.toString('hex');
+    const hashedPassword = await this.transformPassword(password);
 
     return await this.usersService.create({
       ...body,
-      password: result,
+      password: hashedPassword,
     });
+  }
+
+  async transformPassword(password: string): Promise<string> {
+    const saltRounds = 10;
+    return bcrypt.hash(password, saltRounds);
   }
 
   async signin({ email, password }: Partial<User>) {
     const [user] = await this.usersService.findAll({ email });
     if (!user) throw new NotAcceptableException('User not found');
 
-    const [salt, storedHash] = user.password.split('.');
-    const hash = (await scrypt(password, salt, 32)) as Buffer;
+    const passwordMatch = await bcrypt.compare(password, user.password);
 
-    if (storedHash === hash.toString('hex')) {
+    if (passwordMatch) {
       const payload = { username: user.username, sub: user.id };
       const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
       const accessToken = this.jwtService.sign(payload, { expiresIn: '15m' });

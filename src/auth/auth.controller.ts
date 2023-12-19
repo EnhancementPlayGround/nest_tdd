@@ -8,7 +8,7 @@ import {
   Get,
   Req,
 } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
 import { User } from '@/entities/user.entity';
 import { AuthService } from './auth.service';
@@ -21,6 +21,9 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('signup')
+  @ApiBody({ type: SignupAuthDto })
+  @ApiOperation({ summary: 'Create a new user' })
+  @ApiResponse({ status: 400, description: 'Bad Request' })
   async signup(@Body() body: SignupAuthDto) {
     const user = await this.authService.signup(body);
     return user;
