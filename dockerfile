@@ -11,7 +11,7 @@ RUN corepack enable && corepack prepare pnpm@8.12.0 --activate
 WORKDIR /app
 
 # Set as dev environment
-ENV NODE_ENV dev
+ENV NODE_ENV development
 
 # Copy source code into app directory
 COPY --chown=node:node . .

@@ -9,6 +9,7 @@ env:
   AWS_REGION: us-east-1
   ECR_REGISTRY: 371589616781.dkr.ecr.us-east-1.amazonaws.com/nest-prod
   ECR_REPOSITORY: nest-prod
+  NODE_ENV: production
 
 permissions:
   id-token: write
@@ -74,7 +75,7 @@ jobs:
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
           task-definition: .aws/task-definition.json
-          container-name: service-prod
+          container-name: nest-prod
           image: ${{ steps.build-image.outputs.image }}
 
       - name: Deploy Amazon ECS task-definition

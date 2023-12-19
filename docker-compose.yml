@@ -1,6 +1,6 @@
 services:
   api:
-    container_name: nest-container
+    container_name: nest-dev
     image: nest-dev
     restart: unless-stopped
     build:

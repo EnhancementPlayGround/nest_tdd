@@ -6,6 +6,9 @@ on:
       - develop
       - 'release-*'
 
+env:
+  NODE_ENV: production
+
 jobs:
   test:
     runs-on: ubuntu-latest
