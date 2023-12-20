@@ -93,7 +93,14 @@
     "collectCoverageFrom": [
       "**/*.(t|j)s"
     ],
-    "coverageDirectory": "../coverage",
+    "coveragePathIgnorePatterns": [
+      ".*\\.dto\\.ts$",
+      ".*\\.module\\.ts$",
+      ".*\\.provider\\.ts$",
+      ".*\\.entity\\.ts$",
+      "src/coverage/lcov-report/",
+      "src/config/"
+    ],
     "testEnvironment": "node",
     "testResultsProcessor": "jest-sonar-reporter"
   },

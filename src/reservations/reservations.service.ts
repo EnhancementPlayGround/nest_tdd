@@ -11,6 +11,7 @@ import { Cron } from '@nestjs/schedule';
 import { addDays, endOfWeek, format, startOfWeek } from 'date-fns';
 
 import { Auth } from '@/entities/auth.entity';
+import { AuthService } from '@/auth/auth.service';
 import { Reservations } from '@/entities/reservations.entity';
 
 @Injectable()
@@ -20,6 +21,8 @@ export class ReservationsService {
     private reservationsRepository: Repository<Reservations>,
     @Inject('AUTH_REPOSITORY')
     private authRepository: Repository<Auth>,
+
+    private authService: AuthService,
   ) {}
 
   //-----------------------------------------------
@@ -91,7 +94,7 @@ export class ReservationsService {
     userId,
   }: {
     date: string;
-    seatNumber: number;
+    seatNumber: string;
     userId: string;
   }) {
     // 1. 좌석 예약가능 여부 확인
@@ -110,13 +113,11 @@ export class ReservationsService {
     // 3. 임시 배정 확인
     const temporaryHold = reservation.temporaryHolds[seatNumber];
     if (!temporaryHold || temporaryHold.userId !== userId) {
-      throw new BadRequestException(
-        'No temporary hold for this seat by the user',
-      );
+      throw new BadRequestException('Temporary hold data is not match');
     }
 
     // 4. 예약 가능한 좌석에서 해당 좌석 & 임시 배정 정보 삭제
-    const availableSeats = reservation.availableSeats.split(',').map(Number);
+    const availableSeats = reservation.availableSeats.split(',');
     const seatIndex = availableSeats.indexOf(seatNumber);
     if (seatIndex > -1) {
       availableSeats.splice(seatIndex, 1);
@@ -130,13 +131,13 @@ export class ReservationsService {
     return { message: 'Reservation successful' };
   }
 
-  async isSeatAvailable(date: string, seatNumber: number): Promise<boolean> {
+  async isSeatAvailable(date: string, seatNumber: string): Promise<boolean> {
     const reservation = await this.reservationsRepository.findOne({
       where: { date },
     });
 
-    if (reservation) {
-      const availableSeats = reservation.availableSeats.split(',').map(Number);
+    if (reservation && reservation.availableSeats) {
+      const availableSeats = reservation.availableSeats.split(',');
       return availableSeats.includes(seatNumber);
     } else {
       throw new NotFoundException(`Reservation for date ${date} not found`);
@@ -152,7 +153,7 @@ export class ReservationsService {
     queueToken,
   }: {
     date: string;
-    seatNumber: number;
+    seatNumber: string;
     userId: string;
     queueToken: string;
   }) {
@@ -161,7 +162,14 @@ export class ReservationsService {
       where: { userId, queueToken },
     });
     if (!isInQueue) {
-      throw new HttpException('Invalid queue token', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Invalid queue token or Id',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    const remainQueueSize = await this.authService.getRemainQueueSize(userId);
+    if (remainQueueSize <= 0) {
+      throw new HttpException('Invalid queue size', HttpStatus.BAD_REQUEST);
     }
 
     // 2. 날짜의 예약정보 찾기
@@ -173,9 +181,11 @@ export class ReservationsService {
     }
 
     // 3. userId로 이미 임시 보유된 좌석 여부 확인
-    const alreadyHeldSeat = Object.keys(reservation.temporaryHolds).find(
-      (seat) => reservation.temporaryHolds[seat].userId === userId,
-    );
+    const alreadyHeldSeat =
+      reservation.temporaryHolds !== null &&
+      Object?.keys(reservation.temporaryHolds).find(
+        (seat) => reservation.temporaryHolds[seat].userId === userId,
+      );
 
     // 4. put temporaryHolds
     if (alreadyHeldSeat) {

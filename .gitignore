@@ -1,6 +1,7 @@
 # compiled output
 /dist
 /node_modules
+src/coverage
 
 # Logs
 logs
@@ -38,3 +39,4 @@ lerna-debug.log*
 .env
 *.env
 !*.sample.env
+

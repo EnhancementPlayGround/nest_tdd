@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ReservationsService } from './reservations.service';
 import { HttpException, NotFoundException } from '@nestjs/common';
 import { ReservationsController } from './reservations.controller';
+import { AuthService } from '@/auth/auth.service';
 
 const mockReservationsRepository = {
   find: jest.fn(),
@@ -15,10 +16,10 @@ const mockAuthRepository = {
   find: jest.fn(),
   remove: jest.fn(),
 };
+const mockAuthService = { getRemainQueueSize: jest.fn() };
 
 describe('ReservationsService', () => {
   let service: ReservationsService;
-  let controller: ReservationsController;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -32,6 +33,10 @@ describe('ReservationsService', () => {
         {
           provide: 'AUTH_REPOSITORY',
           useValue: mockAuthRepository,
+        },
+        {
+          provide: AuthService,
+          useValue: mockAuthService,
         },
       ],
     }).compile();
@@ -49,7 +54,7 @@ describe('ReservationsService', () => {
         availableSeats: '1,2,3',
       });
 
-      expect(await service.isSeatAvailable('2023-01-01', 2)).toBeTruthy();
+      expect(await service.isSeatAvailable('2023-01-01', '2')).toBeTruthy();
     });
 
     it('should not be', async () => {
@@ -57,13 +62,13 @@ describe('ReservationsService', () => {
         availableSeats: '1,3,4',
       });
 
-      expect(await service.isSeatAvailable('2023-01-01', 2)).toBeFalsy();
+      expect(await service.isSeatAvailable('2023-01-01', '2')).toBeFalsy();
     });
 
     it('no reservations for the date', async () => {
       mockReservationsRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.isSeatAvailable('2023-01-01', 2)).rejects.toThrow(
+      await expect(service.isSeatAvailable('2023-01-01', '2')).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -72,7 +77,7 @@ describe('ReservationsService', () => {
   describe('setTemporaryHold', () => {
     it('should be', async () => {
       const date = '2023-01-01';
-      const seatNumber = 1;
+      const seatNumber = '1';
       const userId = 'user123';
       const queueToken = '';
       const mockReservation = {
@@ -95,7 +100,7 @@ describe('ReservationsService', () => {
       await expect(
         service.setTemporaryHold({
           date: '2023-01-01',
-          seatNumber: 1,
+          seatNumber: '1',
           userId: 'user123',
           queueToken: '',
         }),
@@ -109,7 +114,7 @@ describe('ReservationsService', () => {
       await expect(
         service.setTemporaryHold({
           date: '2023-01-01',
-          seatNumber: 1,
+          seatNumber: '1',
           userId: 'user123',
           queueToken: '',
         }),
@@ -138,68 +143,6 @@ describe('ReservationsService', () => {
     //   await service.releaseExpiredReservations();
     //   expect(reservationsData[0].temporaryHolds['1']).toBeUndefined();
     //   expect(reservationsData[0].temporaryHolds['2']).toBeDefined();
-    // });
-  });
-
-  // controller! ----------------------
-  describe('holdSeat', () => {
-    // it('should successfully hold a seat', async () => {
-    //   const mockBody = {
-    //     date: '2023-01-01',
-    //     seatNumber: 1,
-    //     userId: 'user123',
-    //   };
-    //   const response = await controller.holdSeat(mockBody);
-    //   expect(response).toEqual({ message: 'Seat temporarily held' });
-    //   expect(service.setTemporaryHold).toHaveBeenCalledWith(
-    //     mockBody.date,
-    //     mockBody.seatNumber,
-    //     mockBody.userId,
-    //   );
-    // });
-  });
-
-  describe('reserveSeat', () => {
-    // it('should be successful', async () => {
-    //   // Mock the data
-    //   const date = '2023-01-01';
-    //   const seatNumber = 1;
-    //   const userId = 'user123';
-    //   const queueToken = 'token123';
-    //   const mockReservation = {
-    //     date,
-    //     availableSeats: '1,2,3',
-    //     temporaryHolds: {
-    //       '1': { userId, releaseTime: new Date(Date.now() + 60000) },
-    //     },
-    //   };
-    //   // Mock the repository methods
-    //   mockReservationsRepository.findOne.mockResolvedValue(mockReservation);
-    //   await service.reserveSeat(date, seatNumber, userId, queueToken);
-    //   // Check if the seat is removed from availableSeats
-    //   expect(
-    //     mockReservation.availableSeats.includes(seatNumber.toString()),
-    //   ).toBeFalsy();
-    //   // Check if the temporary hold is removed
-    //   expect(mockReservation.temporaryHolds[seatNumber]).toBeUndefined();
-    // });
-    // it('should fail to reserve a seat', async () => {
-    //   // Mock the data with no available seats
-    //   const date = '2023-01-01';
-    //   const seatNumber = 1;
-    //   const userId = 'user123';
-    //   const queueToken = 'token123';
-    //   const mockReservation = {
-    //     date,
-    //     availableSeats: '',
-    //     temporaryHolds: {},
-    //   };
-    //   // Mock the repository method to return no available seats
-    //   mockReservationsRepository.findOne.mockResolvedValue(mockReservation);
-    //   // Expect the reservation to fail
-    //   await expect(
-    //     service.reserveSeat(date, seatNumber, userId, queueToken),
-    //   ).rejects.toThrow();
     // });
   });
 });

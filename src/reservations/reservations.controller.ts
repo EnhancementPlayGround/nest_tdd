@@ -10,11 +10,12 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ReservationsService } from './reservations.service';
-import { ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guards';
 
 @Controller('reservations')
-// @UseGuards(JwtAuthGuard)
+@ApiTags('🪑 Reservations')
+@UseGuards(JwtAuthGuard)
 export class ReservationsController {
   constructor(private readonly reservationsService: ReservationsService) {}
 
@@ -42,7 +43,7 @@ export class ReservationsController {
     @Body()
     body: {
       date: string;
-      seatNumber: number;
+      seatNumber: string;
       userId: string;
       queueToken: string;
     },
@@ -64,7 +65,7 @@ export class ReservationsController {
     @Body()
     body: {
       date: string;
-      seatNumber: number;
+      seatNumber: string;
       userId: string;
     },
   ) {

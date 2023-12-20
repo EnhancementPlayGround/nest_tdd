@@ -5,8 +5,7 @@ import {
   NotAcceptableException,
 } from '@nestjs/common';
 import { In, Repository } from 'typeorm';
-import { promisify } from 'util';
-import { scrypt as _scrypt, randomBytes } from 'crypto';
+import { scrypt as _scrypt } from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { Cron } from '@nestjs/schedule';
 import AsyncLock from 'async-lock';
@@ -16,8 +15,6 @@ import { Auth } from '@/entities/auth.entity';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import { jwtConstants } from '@/constatns/jwt';
-
-const scrypt = promisify(_scrypt);
 
 @Injectable()
 export class AuthService {
@@ -34,7 +31,7 @@ export class AuthService {
   private queue: string[] = [];
   private idAndTokenExpiryMap: Map<string, number> = new Map();
   private lock = new AsyncLock();
-  private readonly MAX_QUEUE_SIZE = 50;
+  private readonly MAX_WAITING_SIZE = 50;
 
   async signup(body: Partial<User>) {
     const { email, password } = body;
@@ -114,10 +111,10 @@ export class AuthService {
     }
   }
 
-  getRemainQueueSize(): number {
-    const queueLeft = this.queue.length - this.MAX_QUEUE_SIZE - 1;
-    if (queueLeft <= 0) return 0;
-    return queueLeft;
+  getRemainQueueSize(userId: string): number {
+    const sizeLeft = this.queue.indexOf(userId) - this.MAX_WAITING_SIZE;
+    if (sizeLeft < 1) return 0;
+    return sizeLeft;
   }
 
   outQueue(userId?: string) {
@@ -141,7 +138,7 @@ export class AuthService {
 
         this.inQueue(userId);
         const myQueue = this.queue.indexOf(userId);
-        const remainQueueSize = this.getRemainQueueSize();
+        const remainQueueSize = this.getRemainQueueSize(userId);
         const remainingMinute = remainQueueSize * 3;
         const payload = {
           userId,
@@ -180,7 +177,7 @@ export class AuthService {
       const decoded = this.decodeQueueToken(token);
 
       const myQueue = this.queue.indexOf(decoded.userId);
-      const remainQueueSize = this.getRemainQueueSize();
+      const remainQueueSize = this.getRemainQueueSize(decoded.userId);
 
       return {
         remainQueueSize,
