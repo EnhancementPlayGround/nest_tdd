@@ -23,10 +23,13 @@ export class User {
   @Column({ length: 255 })
   username: string;
 
-  @Column('datetime')
-  created_at: Date;
+  @Column('datetime', { name: 'created_at' })
+  createdAt: Date;
 
-  @Column({ nullable: true })
+  @Column('datetime', { nullable: true, name: 'updated_at' })
+  updatedAt: Date | null;
+
+  @Column({ nullable: true, name: 'refresh_token' })
   refreshToken: string;
 
   @AfterInsert()

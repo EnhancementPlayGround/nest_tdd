@@ -76,8 +76,8 @@ export class ReservationsService {
           { length: 50 },
           (_, index) => index + 1,
         ).join(','),
-        created_at: new Date(),
-        updated_at: null,
+        createdAt: new Date(),
+        updatedAt: null,
       });
 
       this.reservationsRepository.save(result);

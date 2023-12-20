@@ -12,13 +12,13 @@ export class Auth {
   @PrimaryGeneratedColumn('increment')
   id: number;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: 'uuid', name: 'user_id' })
   userId: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, name: 'queue_token' })
   queueToken: string;
 
   @ManyToOne(() => User)
-  @JoinColumn({ name: 'userId' })
+  @JoinColumn({ name: 'user_id' })
   user: User;
 }
