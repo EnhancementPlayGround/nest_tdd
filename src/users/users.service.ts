@@ -20,7 +20,7 @@ export class UsersService {
   async create(body: Partial<User>): Promise<User> {
     const result = this.userRepository.create({
       ...body,
-      created_at: new Date(),
+      createdAt: new Date(),
     });
     this.userRepository.save(result);
 
