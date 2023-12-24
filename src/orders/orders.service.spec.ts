@@ -1,10 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { OrdersService } from './orders.service';
 import { OrdersController } from './orders.controller';
+import { Order } from '@/entities/order.entity';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 
 const mockOrderRepository = {
   find: jest.fn(),
-  findOne: jest.fn(),
+  findOneBy: jest.fn(),
   create: jest.fn(),
   save: jest.fn(),
   remove: jest.fn(),
@@ -12,6 +14,7 @@ const mockOrderRepository = {
 
 describe('OrdersService', () => {
   let service: OrdersService;
+  let order: Order;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -25,87 +28,146 @@ describe('OrdersService', () => {
       ],
     }).compile();
 
+    order = new Order();
     service = module.get<OrdersService>(OrdersService);
   });
 
   describe('create Order', () => {
-    it('should create a new order', async () => {
+    it('should create/save new order in repository', async () => {
       const createOrderDto = {
-        // CreateOrderDto
+        seat: '33',
+        date: '2023-12-22',
+        userId: '',
+        reservationId: 0,
+        paymentType: 'point',
       };
 
-      // mockOrderRepository.save() => 생성한 Order를 반환하도록 작성
+      const createdOrder = new Order();
+      mockOrderRepository.create.mockReturnValue(createdOrder);
+      mockOrderRepository.save.mockResolvedValue(createdOrder);
 
-      // orderSerive의 createOrder 호출
-      // test 👉 생성된 Order를 반환하는지 검증
+      const result = await service.createOrder(createOrderDto);
+
+      expect(mockOrderRepository.create).toHaveBeenCalledWith(createOrderDto);
+      expect(mockOrderRepository.save).toHaveBeenCalledWith(createdOrder);
+      expect(result).toEqual(createdOrder);
+    });
+
+    it('should create and return a new order', async () => {
+      const createOrderDto = {
+        seat: '33',
+        date: '2023-12-22',
+        userId: '',
+        reservationId: 0,
+        paymentType: 'point',
+      };
+
+      jest.spyOn(service, 'createOrder').mockResolvedValue(order);
+      const result = await service.createOrder(createOrderDto);
+
+      expect(result).toBe(order);
     });
   });
 
   describe('findAll Orders', () => {
+    it('should find all orders in repository', async () => {
+      const n = 5;
+      const orders = Array.from({ length: n }, () => new Order());
+      mockOrderRepository.find.mockReturnValue(orders);
+
+      const result = await service.findAll();
+
+      expect(result).toStrictEqual(orders);
+    });
+
     it('should return all orders', async () => {
-      // mockOrderRepository.find() => Orders 배열 반환
-      // orderService의 findAllOrders 메서드를 호출
-      // test 👉 반환된 Orders 배열의 길이를 검증
+      const n = 5;
+      const orders = Array.from({ length: n }, () => new Order());
+      jest.spyOn(service, 'findAll').mockResolvedValue(orders);
+
+      const result = await service.findAll();
+
+      expect(result).toStrictEqual(orders);
     });
   });
 
   describe('findOne Order by id', () => {
     it('should return an order by ID', async () => {
       const orderId = 'exampleOrderId';
+      mockOrderRepository.findOneBy.mockResolvedValue(order);
 
-      // mockOrderRepository.findOne() => Order를 반환
+      const result = await service.findOrderById(orderId);
 
-      // orderSerive의의 findOneById 메서드를 호출
-      // test 👉 반환된 Order가 예상 orderId와 일치하는지 검증
+      expect(result).toEqual(order);
     });
 
     it('should return null for non-existing order', async () => {
-      const orderId = 'nonExistingOrderId';
+      const orderId = 'nonExistentOrderId';
+      jest.spyOn(service, 'findOrderById').mockResolvedValue(null);
 
-      // mockOrderRepository.findOne() => null 반환
+      const result = await service.findOrderById(orderId);
 
-      // orderSerive의의 findOneById 메서드를 호출
-      // test 👉 반환된 값이 null인지 검증
-      // null 반환
+      expect(result).toBeNull();
     });
   });
 
   describe('update Order', () => {
     it('should update an existing order', async () => {
       const orderId = 'exampleOrderId';
-      const updateOrderDto = {
-        // UpdateOrderDto
+      const updateOrderDtoPending = {
+        status: 'pending',
+      };
+      mockOrderRepository.save.mockResolvedValue(order);
+
+      const resultPending = await service.updateOrder(
+        orderId,
+        updateOrderDtoPending,
+      );
+
+      expect(resultPending).toEqual(order);
+
+      const updateOrderDtoDone = {
+        status: 'done',
       };
 
-      // mockOrderRepository.findOne() => Order 반환
-      // mockOrderRepository.save()를 사용하여 Order 업데이트
+      const resultDone = await service.updateOrder(orderId, updateOrderDtoDone);
 
-      // orderSerive의의 updateOrder 메서드를 호출
-      // test 👉 반환된 업데이트된 Order가 예상된 값과 일치하는지 검증
+      expect(resultDone).toEqual(order);
     });
 
     it('should throw an exception for non-existing order', async () => {
-      // mockOrderRepository.findOne() => null 반환
-      // orderSerive의의 updateOrder 메서드를 호출
-      // test 👉 예외 검증
+      const orderId = 'nonExistentOrderId';
+      const updateOrderDto = {
+        status: 'pending',
+      };
+      jest.spyOn(service, 'findOrderById').mockResolvedValue(null);
+
+      await expect(
+        service.updateOrder(orderId, updateOrderDto),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('remove Order', () => {
     it('should delete an existing order', async () => {
       const orderId = 'exampleOrderId';
+      jest.spyOn(service, 'findOrderById').mockResolvedValue(order);
+      mockOrderRepository.remove.mockResolvedValue({ affected: 1 });
 
-      // mockOrderRepository.findOne() => Order 반환
-      // mockOrderRepository.delete() => Order 삭제
+      await service.deleteOrder(orderId);
 
-      // 서비스의 deleteOrder 메서드를 호출
-      // test 👉 호출여부 검증 (toHaveBeenCalledWith? 삭제 검증 더 찾아보기)
+      expect(service.findOrderById).toHaveBeenCalledWith(orderId);
+      expect(mockOrderRepository.remove).toHaveBeenCalledWith(order);
     });
 
     it('should throw an exception for non-existing order', async () => {
-      // mockOrderRepository.findOne() => null 반환
-      // orderSerive의의 deleteOrder 메서드를 호출
-      // test 👉 예외 검증
+      const orderId = 'nonExistentOrderId';
+
+      jest.spyOn(service, 'findOrderById').mockResolvedValue(null);
+
+      await expect(service.deleteOrder(orderId)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

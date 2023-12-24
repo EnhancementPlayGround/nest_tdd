@@ -16,6 +16,9 @@ export class Order {
   @Column()
   date: string;
 
+  @Column({ default: 'created' })
+  status: 'created' | 'pending' | 'done';
+
   @Column('uuid', { name: 'user_id' })
   userId: string;
 

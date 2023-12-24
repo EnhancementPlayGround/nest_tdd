@@ -16,8 +16,8 @@ export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
   @Post()
-  create(@Body() createOrderDto: CreateOrderDto) {
-    return this.ordersService.create(createOrderDto);
+  createOrder(@Body() createOrderDto: CreateOrderDto) {
+    return this.ordersService.createOrder(createOrderDto);
   }
 
   @Get()
@@ -27,7 +27,7 @@ export class OrdersController {
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.ordersService.findOneById(id);
+    return this.ordersService.findOrderById(id);
   }
 
   @Patch(':id')

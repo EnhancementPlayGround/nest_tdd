@@ -10,7 +10,7 @@ import {
   Req,
   UnauthorizedException,
 } from '@nestjs/common';
-import { serialize } from 'src/interceptors/serialize.interceptor';
+import { serialize } from '@/interceptors/serialize.interceptor';
 
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';

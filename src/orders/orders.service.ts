@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { Repository } from 'typeorm';
 
 import { serialize } from '@/interceptors/serialize.interceptor';
@@ -16,27 +16,35 @@ export class OrdersService {
     private ordersRepository: Repository<Order>,
   ) {}
 
-  create(createOrderDto: CreateOrderDto) {
-    console.log(createOrderDto);
+  async createOrder(createOrderDto: CreateOrderDto): Promise<Order> {
+    const result = this.ordersRepository.create({
+      ...createOrderDto,
+    });
+    this.ordersRepository.save(result);
+
+    return result;
   }
 
   async findAll(): Promise<Order[]> {
-    return [];
+    return await this.ordersRepository.find();
   }
 
-  async findOneById(id: string): Promise<Order | null> {
-    // order가 없을 때 null 반환
-    return null;
-
-    // return order
+  async findOrderById(id: string): Promise<Order | null> {
+    return this.ordersRepository.findOneBy({ id });
   }
 
-  updateOrder(id: string, updateOrderDto: UpdateOrderDto) {
-    console.log(updateOrderDto);
-    // order가 없을 때, exception 반환
+  async updateOrder(id: string, updateOrderDto: UpdateOrderDto) {
+    const order = await this.findOrderById(id);
+    if (!order) throw new NotFoundException(`Order ${id} not found`);
+
+    Object.assign(order, updateOrderDto);
+
+    return this.ordersRepository.save(order);
   }
 
-  deleteOrder(id: string) {
-    // order가 없을 때, exception 반환
+  async deleteOrder(id: string) {
+    const order = await this.findOrderById(id);
+    if (!order) throw new NotFoundException(`Order ${id} not found`);
+    this.ordersRepository.remove(order);
   }
 }

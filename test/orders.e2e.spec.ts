@@ -1,16 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
-import { AppModule } from '@/app.module';
 
-import { OrdersService } from './orders.service';
+import { OrdersService } from '../src/orders/orders.service';
+import { INestApplication } from '@nestjs/common';
+import { DatabaseModule } from '@/database/database.module';
 
 describe('OrdersController (E2E)', () => {
-  let app;
-  let ordersService;
+  let app: INestApplication;
+  let ordersService: OrdersService;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
+      imports: [DatabaseModule],
     }).compile();
 
     app = moduleFixture.createNestApplication();
@@ -20,7 +21,7 @@ describe('OrdersController (E2E)', () => {
   });
 
   afterAll(async () => {
-    await app.close();
+    if (app) await app.close();
   });
 
   it('/orders (POST)', () => {
@@ -50,6 +51,11 @@ describe('OrdersController (E2E)', () => {
   it('/orders/:id (GET)', async () => {
     const createdOrder = await ordersService.createOrder({
       /* CreateOrderDto */
+      reservationId: 13,
+      userId: '',
+      date: '',
+      seat: '',
+      paymentType: '',
     });
 
     return request(app.getHttpServer())
@@ -64,6 +70,11 @@ describe('OrdersController (E2E)', () => {
   it('/orders/:id (PATCH)', async () => {
     const createdOrder = await ordersService.createOrder({
       /* CreateOrderDto */
+      reservationId: 13,
+      userId: '',
+      date: '',
+      seat: '',
+      paymentType: '',
     });
 
     const updateOrderDto = {
@@ -83,6 +94,11 @@ describe('OrdersController (E2E)', () => {
   it('/orders/:id (DELETE)', async () => {
     const createdOrder = await ordersService.createOrder({
       /* CreateOrderDto */
+      reservationId: 13,
+      userId: '',
+      date: '',
+      seat: '',
+      paymentType: '',
     });
 
     const response = await request(app.getHttpServer())

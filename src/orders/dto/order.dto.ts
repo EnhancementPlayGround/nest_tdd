@@ -12,4 +12,7 @@ export class OrderDto {
 
   @Expose()
   createdAt: Date;
+
+  @Expose()
+  status: string;
 }
