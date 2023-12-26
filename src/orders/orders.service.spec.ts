@@ -1,35 +1,31 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { OrdersService } from './orders.service';
-import { OrdersController } from './orders.controller';
-import { Order } from '@/entities/order.entity';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { TestingModule } from '@nestjs/testing';
+import { INestApplication, NotFoundException } from '@nestjs/common';
 
-const mockOrderRepository = {
-  find: jest.fn(),
-  findOneBy: jest.fn(),
-  create: jest.fn(),
-  save: jest.fn(),
-  remove: jest.fn(),
-};
+import { Order } from '@/entities/order.entity';
+import {
+  mockOrderRepository,
+  orderFixture,
+} from '@test/fixture/orders.fixture';
+import { OrdersService } from './orders.service';
 
 describe('OrdersService', () => {
   let service: OrdersService;
   let order: Order;
+  let app: INestApplication;
+  let moduleFixture: TestingModule;
 
   beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      controllers: [OrdersController],
-      providers: [
-        OrdersService,
-        {
-          provide: 'ORDER_REPOSITORY',
-          useValue: mockOrderRepository,
-        },
-      ],
-    }).compile();
-
     order = new Order();
-    service = module.get<OrdersService>(OrdersService);
+
+    moduleFixture = await orderFixture();
+    app = moduleFixture.createNestApplication();
+    service = moduleFixture.get<OrdersService>(OrdersService);
+
+    await app.init();
+  });
+
+  afterAll(async () => {
+    if (app) await app.close();
   });
 
   describe('create Order', () => {
@@ -38,7 +34,7 @@ describe('OrdersService', () => {
         seat: '33',
         date: '2023-12-22',
         userId: '',
-        reservationId: 0,
+        reservationId: '',
         paymentType: 'point',
       };
 
@@ -57,8 +53,8 @@ describe('OrdersService', () => {
       const createOrderDto = {
         seat: '33',
         date: '2023-12-22',
-        userId: '',
-        reservationId: 0,
+        userId: '84a9e237-4722-4302-8fc3-6e24f2a3ba53',
+        reservationId: '65fa3134-9f33-4b80-b036-a7f56a899ab2',
         paymentType: 'point',
       };
 

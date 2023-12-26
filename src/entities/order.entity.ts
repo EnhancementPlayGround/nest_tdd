@@ -3,7 +3,11 @@ import {
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
+  ManyToOne,
+  OneToOne,
 } from 'typeorm';
+import { User } from './user.entity';
+import { Reservations } from './reservations.entity';
 
 @Entity('order')
 export class Order {
@@ -19,11 +23,13 @@ export class Order {
   @Column({ default: 'created' })
   status: 'created' | 'pending' | 'done';
 
+  @ManyToOne(() => User)
   @Column('uuid', { name: 'user_id' })
   userId: string;
 
+  @OneToOne(() => Reservations)
   @Column({ name: 'reservation_id' })
-  reservationId: number;
+  reservationId: string;
 
   @Column({ name: 'payment_type' })
   paymentType: string;

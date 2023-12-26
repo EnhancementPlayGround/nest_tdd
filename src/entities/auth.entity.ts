@@ -9,8 +9,8 @@ import { User } from './user.entity';
 
 @Entity('auth')
 export class Auth {
-  @PrimaryGeneratedColumn('increment')
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @Column({ type: 'uuid', name: 'user_id' })
   userId: string;

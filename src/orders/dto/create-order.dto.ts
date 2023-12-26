@@ -11,7 +11,7 @@ export class CreateOrderDto {
   readonly userId: string;
 
   @IsUUID()
-  readonly reservationId: number;
+  readonly reservationId: string;
 
   @IsString()
   readonly paymentType: string;

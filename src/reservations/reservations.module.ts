@@ -6,6 +6,8 @@ import { AuthService } from '@/auth/auth.service';
 import { ReservationsService } from './reservations.service';
 import { ReservationsController } from './reservations.controller';
 import { reservationsProviders } from './reservations.providers';
+import { usersProviders } from '@/users/users.providers';
+import { UsersService } from '@/users/users.service';
 
 @Module({
   imports: [DatabaseModule],
@@ -15,6 +17,8 @@ import { reservationsProviders } from './reservations.providers';
     ReservationsService,
     ...authProviders,
     AuthService,
+    ...usersProviders,
+    UsersService,
   ],
   exports: [ReservationsService],
 })
