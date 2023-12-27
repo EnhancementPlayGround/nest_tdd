@@ -15,10 +15,7 @@ export async function orderFixture() {
     controllers: [OrdersController],
     providers: [
       OrdersService,
-      {
-        provide: 'ORDER_REPOSITORY',
-        useValue: mockOrderRepository,
-      },
+      { provide: 'ORDER_REPOSITORY', useValue: mockOrderRepository },
     ],
   }).compile();
 

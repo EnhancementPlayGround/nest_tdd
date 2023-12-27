@@ -14,5 +14,5 @@ export class OrderDto {
   createdAt: Date;
 
   @Expose()
-  status: string;
+  status: 'created' | 'pending' | 'done';
 }

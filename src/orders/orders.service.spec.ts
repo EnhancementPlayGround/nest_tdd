@@ -2,10 +2,7 @@ import { TestingModule } from '@nestjs/testing';
 import { INestApplication, NotFoundException } from '@nestjs/common';
 
 import { Order } from '@/entities/order.entity';
-import {
-  mockOrderRepository,
-  orderFixture,
-} from '@test/fixture/orders.fixture';
+import { mockOrderRepository, orderFixture } from '@test/orders/orders.fixture';
 import { OrdersService } from './orders.service';
 
 describe('OrdersService', () => {
