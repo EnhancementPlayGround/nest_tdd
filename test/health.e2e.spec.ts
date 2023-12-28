@@ -24,8 +24,6 @@ describe('AppController (e2e)', () => {
   });
 
   it('/health (GET)', async () => {
-    // 여기서 /health/ping이 'health'이도록 mocking
-
     const response = await request(app.getHttpServer())
       .get('/health')
       .expect(200);
