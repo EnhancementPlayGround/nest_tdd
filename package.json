@@ -98,6 +98,8 @@
       ".*\\.module\\.ts$",
       ".*\\.provider\\.ts$",
       ".*\\.entity\\.ts$",
+      ".*\\.strategy\\.ts$",
+      ".*\\.providers\\.ts$",
       "src/coverage/lcov-report/",
       "src/config/"
     ],
