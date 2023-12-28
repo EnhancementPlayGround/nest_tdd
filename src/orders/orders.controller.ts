@@ -7,11 +7,15 @@ import {
   Param,
   Delete,
 } from '@nestjs/common';
+import { serialize } from '@/interceptors/serialize.interceptor';
+
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
+import { OrderDto } from './dto/order.dto';
 
 @Controller('orders')
+@serialize(OrderDto)
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 

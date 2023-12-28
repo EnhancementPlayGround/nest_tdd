@@ -1,15 +1,11 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { Repository } from 'typeorm';
 
-import { serialize } from '@/interceptors/serialize.interceptor';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
-
 import { Order } from '@/entities/order.entity';
-import { OrderDto } from './dto/order.dto';
 
 @Injectable()
-@serialize(OrderDto)
 export class OrdersService {
   constructor(
     @Inject('ORDER_REPOSITORY')
@@ -20,9 +16,8 @@ export class OrdersService {
     const result = this.ordersRepository.create({
       ...createOrderDto,
     });
-    this.ordersRepository.save(result);
 
-    return result;
+    return await this.ordersRepository.save(result);
   }
 
   async findAll(): Promise<Order[]> {
@@ -30,16 +25,19 @@ export class OrdersService {
   }
 
   async findOrderById(id: string): Promise<Order | null> {
-    return this.ordersRepository.findOneBy({ id });
+    return await this.ordersRepository.findOneBy({ id });
   }
 
-  async updateOrder(id: string, updateOrderDto: UpdateOrderDto) {
+  async updateOrder(
+    id: string,
+    updateOrderDto: UpdateOrderDto,
+  ): Promise<Order> {
     const order = await this.findOrderById(id);
     if (!order) throw new NotFoundException(`Order ${id} not found`);
 
     Object.assign(order, updateOrderDto);
 
-    return this.ordersRepository.save(order);
+    return await this.ordersRepository.save(order);
   }
 
   async deleteOrder(id: string) {
