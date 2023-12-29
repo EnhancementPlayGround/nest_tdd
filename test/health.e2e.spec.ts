@@ -16,15 +16,25 @@ describe('AppController (e2e)', () => {
     await app.init();
   });
 
-  test('/health (GET)', () => {
-    return request(app.getHttpServer())
-      .get('/health')
+  it('/health/ping (GET)', async () => {
+    await request(app.getHttpServer())
+      .get('/health/ping')
       .expect(200)
-      .expect({
-        status: 'ok',
-        info: { 'nestjs-docs': { status: 'up' } },
-        error: {},
-        details: { 'nestjs-docs': { status: 'up' } },
-      });
+      .expect('health');
   });
+
+  it('/health (GET)', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/health')
+      .expect(200);
+
+    expect(response.body).toEqual({
+      status: 'ok',
+      info: { 'nestjs-docs': { status: 'down' } },
+      error: {},
+      details: { 'nestjs-docs': { status: 'down' } },
+    });
+  });
+
+  afterEach(async () => await app.close());
 });
