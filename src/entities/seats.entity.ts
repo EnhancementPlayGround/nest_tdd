@@ -1,13 +1,7 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  UpdateDateColumn,
-  CreateDateColumn,
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 
 @Entity()
-export class Reservations {
+export class Seats {
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -16,6 +10,9 @@ export class Reservations {
 
   @Column({ name: 'available_seats' })
   availableSeats: string;
+
+  @Column({ default: 'created' })
+  status: 'created' | 'completed';
 
   @Column({ type: 'json', nullable: true, name: 'temporary_holds' })
   temporaryHolds: {

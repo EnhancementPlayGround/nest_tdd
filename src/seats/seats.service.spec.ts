@@ -1,10 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ReservationsService } from './reservations.service';
+import { SeatsService } from './seats.service';
 import { HttpException, NotFoundException } from '@nestjs/common';
-import { ReservationsController } from './reservations.controller';
+import { SeatsController } from './seats.controller';
 import { AuthService } from '@/auth/auth.service';
 
-const mockReservationsRepository = {
+const mockSeatsRepository = {
   find: jest.fn(),
   findOne: jest.fn(),
   create: jest.fn(),
@@ -18,17 +18,21 @@ const mockAuthRepository = {
 };
 const mockAuthService = { getRemainQueueSize: jest.fn() };
 
-describe('ReservationsService', () => {
-  let service: ReservationsService;
+/**
+ * 좌석 대기열
+ */
+
+describe('SeatsService', () => {
+  let service: SeatsService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      controllers: [ReservationsController],
+      controllers: [SeatsController],
       providers: [
-        ReservationsService,
+        SeatsService,
         {
-          provide: 'RESERVATIONS_REPOSITORY',
-          useValue: mockReservationsRepository,
+          provide: 'SEATS_REPOSITORY',
+          useValue: mockSeatsRepository,
         },
         {
           provide: 'AUTH_REPOSITORY',
@@ -41,7 +45,7 @@ describe('ReservationsService', () => {
       ],
     }).compile();
 
-    service = module.get<ReservationsService>(ReservationsService);
+    service = module.get<SeatsService>(SeatsService);
   });
 
   it('should be defined', () => {
@@ -50,7 +54,7 @@ describe('ReservationsService', () => {
 
   describe('isSeatAvailable', () => {
     it('should be', async () => {
-      mockReservationsRepository.findOne.mockResolvedValue({
+      mockSeatsRepository.findOne.mockResolvedValue({
         availableSeats: '1,2,3',
       });
 
@@ -58,7 +62,7 @@ describe('ReservationsService', () => {
     });
 
     it('should not be', async () => {
-      mockReservationsRepository.findOne.mockResolvedValue({
+      mockSeatsRepository.findOne.mockResolvedValue({
         availableSeats: '1,3,4',
       });
 
@@ -66,7 +70,7 @@ describe('ReservationsService', () => {
     });
 
     it('no reservations for the date', async () => {
-      mockReservationsRepository.findOne.mockResolvedValue(null);
+      mockSeatsRepository.findOne.mockResolvedValue(null);
 
       await expect(service.isSeatAvailable('2023-01-01', '2')).rejects.toThrow(
         NotFoundException,
@@ -86,7 +90,7 @@ describe('ReservationsService', () => {
         temporaryHolds: {},
       };
       mockAuthRepository.findOne.mockResolvedValue({});
-      mockReservationsRepository.findOne.mockResolvedValue(mockReservation);
+      mockSeatsRepository.findOne.mockResolvedValue(mockReservation);
 
       await service.setTemporaryHold({ date, seatNumber, userId, queueToken });
 
@@ -109,7 +113,7 @@ describe('ReservationsService', () => {
 
     it("can't find reservation", async () => {
       mockAuthRepository.findOne.mockResolvedValue({});
-      mockReservationsRepository.findOne.mockResolvedValue(null);
+      mockSeatsRepository.findOne.mockResolvedValue(null);
 
       await expect(
         service.setTemporaryHold({

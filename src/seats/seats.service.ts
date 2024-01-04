@@ -12,13 +12,13 @@ import { addDays, endOfWeek, format, startOfWeek } from 'date-fns';
 
 import { Auth } from '@/entities/auth.entity';
 import { AuthService } from '@/auth/auth.service';
-import { Reservations } from '@/entities/reservations.entity';
+import { Seats } from '@/entities/seats.entity';
 
 @Injectable()
-export class ReservationsService {
+export class SeatsService {
   constructor(
-    @Inject('RESERVATIONS_REPOSITORY')
-    private reservationsRepository: Repository<Reservations>,
+    @Inject('SEATS_REPOSITORY')
+    private seatsRepository: Repository<Seats>,
     @Inject('AUTH_REPOSITORY')
     private authRepository: Repository<Auth>,
 
@@ -27,25 +27,52 @@ export class ReservationsService {
 
   //-----------------------------------------------
   // 예약가능 좌석 / 가용좌석 available seats
-  async getAvailableDates(): Promise<string[]> {
-    const availableDates = await this.reservationsRepository.query(`
+  async getSeats(status?: Seats['status']): Promise<Seats[]> {
+    if (status) {
+      return await this.seatsRepository.query(
+        `
+      SELECT * FROM reservations WHERE status = $1
+    `,
+        [status],
+      );
+    }
+
+    return await this.seatsRepository.query(`
       SELECT DISTINCT date FROM reservations
     `);
-
-    return availableDates.map((entry) => entry.date);
   }
 
-  async getAvailableSeats(dateString: string): Promise<string> {
-    const reservation = await this.reservationsRepository.findOne({
+  async getSeatByDate(dateString: string): Promise<Seats> {
+    const seat = await this.seatsRepository.findOne({
       select: ['availableSeats'],
       where: { date: dateString },
     });
+    if (!seat) {
+      throw new NotFoundException(`No seats found for reservation`);
+    }
 
-    return reservation ? reservation.availableSeats : '';
+    return seat;
   }
 
-  private getDateString(date: Date): string {
-    return format(date, 'yyyy-MM-dd');
+  async createSeats(body: Partial<Seats>): Promise<Seats> {
+    const result = this.seatsRepository.create({
+      ...body,
+      createdAt: new Date(),
+    });
+    this.seatsRepository.save(result);
+
+    return result;
+  }
+
+  async updateSeatByDate(
+    dateString: string,
+    attr: Partial<Seats>,
+  ): Promise<Seats> {
+    const seat = await this.getSeatByDate(dateString);
+
+    Object.assign(seat, attr);
+
+    return await this.seatsRepository.save(seat);
   }
 
   async initializeAvailableDates(currentDate?: Date) {
@@ -56,22 +83,22 @@ export class ReservationsService {
 
     const startOfCurrentWeek = startOfWeek(currentDate);
     const endOfCurrentWeek = endOfWeek(currentDate);
-    const existingDates = new Set(await this.getAvailableDates());
+    const existingDates = new Set((await this.getSeats()).map((e) => e.date));
 
     // 이번 주의 날짜를 생성하고 DB에 추가
     const datesToAdd: Date[] = [];
     let currentDateToAdd = startOfCurrentWeek;
 
     while (currentDateToAdd <= endOfCurrentWeek) {
-      if (!existingDates.has(this.getDateString(currentDateToAdd))) {
+      if (!existingDates.has(this.formatDateString(currentDateToAdd))) {
         datesToAdd.push(currentDateToAdd);
       }
       currentDateToAdd = addDays(currentDateToAdd, 1);
     }
 
     datesToAdd.map(async (date) => {
-      const result = this.reservationsRepository.create({
-        date: this.getDateString(date),
+      const result = this.seatsRepository.create({
+        date: this.formatDateString(date),
         availableSeats: Array.from(
           { length: 50 },
           (_, index) => index + 1,
@@ -80,11 +107,13 @@ export class ReservationsService {
         updatedAt: null,
       });
 
-      this.reservationsRepository.save(result);
+      this.seatsRepository.save(result);
 
       return result;
     });
   }
+
+  // -----------------------------------------------
 
   // -----------------------------------------------
   // 예약 정보 reservations
@@ -103,7 +132,7 @@ export class ReservationsService {
     }
 
     // 2. 날짜의 예약정보 찾기
-    let reservation = await this.reservationsRepository.findOne({
+    let reservation = await this.seatsRepository.findOne({
       where: { date },
     });
     if (!reservation) {
@@ -127,12 +156,12 @@ export class ReservationsService {
     delete reservation.temporaryHolds[seatNumber];
 
     // 5. 날짜의 예약정보 저장
-    await this.reservationsRepository.save(reservation);
+    await this.seatsRepository.save(reservation);
     return { message: 'Reservation successful' };
   }
 
   async isSeatAvailable(date: string, seatNumber: string): Promise<boolean> {
-    const reservation = await this.reservationsRepository.findOne({
+    const reservation = await this.seatsRepository.findOne({
       where: { date },
     });
 
@@ -173,7 +202,7 @@ export class ReservationsService {
     }
 
     // 2. 날짜의 예약정보 찾기
-    const reservation = await this.reservationsRepository.findOne({
+    const reservation = await this.seatsRepository.findOne({
       where: { date },
     });
     if (!reservation) {
@@ -200,12 +229,12 @@ export class ReservationsService {
     };
 
     // 5. reservation 저장
-    await this.reservationsRepository.save(reservation);
+    await this.seatsRepository.save(reservation);
   }
 
   @Cron('*/5 * * * *')
   async releaseExpiredReservations() {
-    const reservations = await this.reservationsRepository.find();
+    const reservations = await this.seatsRepository.find();
     const currentTime = new Date();
 
     reservations.forEach(async (reservation) => {
@@ -218,8 +247,12 @@ export class ReservationsService {
             delete reservation.temporaryHolds[seatNumber];
           }
         });
-        await this.reservationsRepository.save(reservation);
+        await this.seatsRepository.save(reservation);
       }
     });
+  }
+
+  private formatDateString(date: Date): string {
+    return format(date, 'yyyy-MM-dd');
   }
 }
