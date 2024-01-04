@@ -10,7 +10,7 @@ import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { HealthModule } from './health/health.module';
 import { UsersModule } from './users/users.module';
-import { ReservationsModule } from './reservations/reservations.module';
+import { SeatsModule } from './seats/seats.module';
 
 @Module({
   imports: [
@@ -29,7 +29,7 @@ import { ReservationsModule } from './reservations/reservations.module';
     ScheduleModule.forRoot(),
     AuthModule,
     UsersModule,
-    ReservationsModule,
+    SeatsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
