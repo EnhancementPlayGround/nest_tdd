@@ -69,7 +69,7 @@ describe('SeatsService', () => {
       expect(await service.isSeatAvailable('2023-01-01', '2')).toBeFalsy();
     });
 
-    it('no reservations for the date', async () => {
+    it('no seats for the date', async () => {
       mockSeatsRepository.findOne.mockResolvedValue(null);
 
       await expect(service.isSeatAvailable('2023-01-01', '2')).rejects.toThrow(
@@ -111,7 +111,7 @@ describe('SeatsService', () => {
       ).rejects.toThrow(HttpException);
     });
 
-    it("can't find reservation", async () => {
+    it("can't find seat", async () => {
       mockAuthRepository.findOne.mockResolvedValue({});
       mockSeatsRepository.findOne.mockResolvedValue(null);
 
@@ -126,11 +126,11 @@ describe('SeatsService', () => {
     });
   });
 
-  describe('releaseExpiredReservations', () => {
+  describe('releaseExpiredSeats', () => {
     // it('should remove', async () => {
     //   const expiredTime = new Date();
     //   expiredTime.setMinutes(expiredTime.getMinutes() - 5); // 5분 전
-    //   const reservationsData = [
+    //   const seatsData = [
     //     {
     //       date: '2023-01-01',
     //       availableSeats: '1,2,3',

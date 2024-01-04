@@ -31,14 +31,14 @@ export class SeatsService {
     if (status) {
       return await this.seatsRepository.query(
         `
-      SELECT * FROM reservations WHERE status = $1
+      SELECT * FROM seats WHERE status = $1
     `,
         [status],
       );
     }
 
     return await this.seatsRepository.query(`
-      SELECT DISTINCT date FROM reservations
+      SELECT DISTINCT date FROM seats
     `);
   }
 
@@ -48,7 +48,7 @@ export class SeatsService {
       where: { date: dateString },
     });
     if (!seat) {
-      throw new NotFoundException(`No seats found for reservation`);
+      throw new NotFoundException(`No seats found for seat`);
     }
 
     return seat;
@@ -116,7 +116,7 @@ export class SeatsService {
   // -----------------------------------------------
 
   // -----------------------------------------------
-  // 예약 정보 reservations
+  // 예약 정보 seats
   async reserveSeat({
     date,
     seatNumber,
@@ -132,44 +132,44 @@ export class SeatsService {
     }
 
     // 2. 날짜의 예약정보 찾기
-    let reservation = await this.seatsRepository.findOne({
+    let seat = await this.seatsRepository.findOne({
       where: { date },
     });
-    if (!reservation) {
-      throw new NotFoundException(`No reservation found for date ${date}`);
+    if (!seat) {
+      throw new NotFoundException(`No seat found for date ${date}`);
     }
 
     // 3. 임시 배정 확인
-    const temporaryHold = reservation.temporaryHolds[seatNumber];
+    const temporaryHold = seat.temporaryHolds[seatNumber];
     if (!temporaryHold || temporaryHold.userId !== userId) {
       throw new BadRequestException('Temporary hold data is not match');
     }
 
     // 4. 예약 가능한 좌석에서 해당 좌석 & 임시 배정 정보 삭제
-    const availableSeats = reservation.availableSeats.split(',');
+    const availableSeats = seat.availableSeats.split(',');
     const seatIndex = availableSeats.indexOf(seatNumber);
     if (seatIndex > -1) {
       availableSeats.splice(seatIndex, 1);
     }
-    reservation.availableSeats = availableSeats.join(',');
+    seat.availableSeats = availableSeats.join(',');
 
-    delete reservation.temporaryHolds[seatNumber];
+    delete seat.temporaryHolds[seatNumber];
 
     // 5. 날짜의 예약정보 저장
-    await this.seatsRepository.save(reservation);
-    return { message: 'Reservation successful' };
+    await this.seatsRepository.save(seat);
+    return { message: 'seat successful' };
   }
 
   async isSeatAvailable(date: string, seatNumber: string): Promise<boolean> {
-    const reservation = await this.seatsRepository.findOne({
+    const seat = await this.seatsRepository.findOne({
       where: { date },
     });
 
-    if (reservation && reservation.availableSeats) {
-      const availableSeats = reservation.availableSeats.split(',');
+    if (seat && seat.availableSeats) {
+      const availableSeats = seat.availableSeats.split(',');
       return availableSeats.includes(seatNumber);
     } else {
-      throw new NotFoundException(`Reservation for date ${date} not found`);
+      throw new NotFoundException(`seat for date ${date} not found`);
     }
   }
 
@@ -202,52 +202,52 @@ export class SeatsService {
     }
 
     // 2. 날짜의 예약정보 찾기
-    const reservation = await this.seatsRepository.findOne({
+    const seat = await this.seatsRepository.findOne({
       where: { date },
     });
-    if (!reservation) {
-      throw new NotFoundException(`Reservation for date ${date} not found`);
+    if (!seat) {
+      throw new NotFoundException(`seat for date ${date} not found`);
     }
 
     // 3. userId로 이미 임시 보유된 좌석 여부 확인
     const alreadyHeldSeat =
-      reservation.temporaryHolds !== null &&
-      Object?.keys(reservation.temporaryHolds).find(
-        (seat) => reservation.temporaryHolds[seat].userId === userId,
+      seat.temporaryHolds !== null &&
+      Object?.keys(seat.temporaryHolds).find(
+        (seatIndex) => seat.temporaryHolds[seatIndex].userId === userId,
       );
 
     // 4. put temporaryHolds
     if (alreadyHeldSeat) {
-      delete reservation.temporaryHolds[alreadyHeldSeat];
+      delete seat.temporaryHolds[alreadyHeldSeat];
     }
     const releaseTime = new Date();
     releaseTime.setMinutes(releaseTime.getMinutes() + 5);
 
-    reservation.temporaryHolds = {
-      ...reservation.temporaryHolds,
+    seat.temporaryHolds = {
+      ...seat.temporaryHolds,
       [seatNumber]: { userId, releaseTime },
     };
 
-    // 5. reservation 저장
-    await this.seatsRepository.save(reservation);
+    // 5. seat 저장
+    await this.seatsRepository.save(seat);
   }
 
   @Cron('*/5 * * * *')
-  async releaseExpiredReservations() {
-    const reservations = await this.seatsRepository.find();
+  async releaseExpiredseats() {
+    const seats = await this.seatsRepository.find();
     const currentTime = new Date();
 
-    reservations.forEach(async (reservation) => {
-      if (reservation.temporaryHolds) {
-        Object.keys(reservation.temporaryHolds).forEach((seatNumber) => {
-          const hold = reservation.temporaryHolds[seatNumber];
+    seats.forEach(async (seat) => {
+      if (seat.temporaryHolds) {
+        Object.keys(seat.temporaryHolds).forEach((seatNumber) => {
+          const hold = seat.temporaryHolds[seatNumber];
 
           if (hold.releaseTime < currentTime) {
-            reservation.availableSeats += `,${seatNumber}`;
-            delete reservation.temporaryHolds[seatNumber];
+            seat.availableSeats += `,${seatNumber}`;
+            delete seat.temporaryHolds[seatNumber];
           }
         });
-        await this.seatsRepository.save(reservation);
+        await this.seatsRepository.save(seat);
       }
     });
   }
