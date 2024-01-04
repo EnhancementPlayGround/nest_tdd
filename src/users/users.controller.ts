@@ -17,7 +17,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserDto } from './dto/user.dto';
 import { ApiTags } from '@nestjs/swagger';
-import { JwtAuthGuard } from '@/auth/jwt-auth.guards';
+import { JwtAuthGuard } from '@/utils/jwt/jwt-auth.guards';
 
 @Controller('users')
 @ApiTags('👩‍👩‍👧‍👦 users')

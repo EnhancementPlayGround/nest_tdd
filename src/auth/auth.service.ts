@@ -1,224 +1,149 @@
-import {
-  BadRequestException,
-  Inject,
-  Injectable,
-  NotAcceptableException,
-} from '@nestjs/common';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { In, Repository } from 'typeorm';
-import { scrypt as _scrypt } from 'crypto';
-import * as bcrypt from 'bcrypt';
-import { Cron } from '@nestjs/schedule';
-import AsyncLock from 'async-lock';
-
-import { User } from '@/entities/user.entity';
-import { Auth } from '@/entities/auth.entity';
-import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
+import { Cron } from '@nestjs/schedule';
 import { jwtConstants } from '@/constatns/jwt';
+import { Auth } from '@/entities/auth.entity';
+// import { QueueTokenManager } from '@/auth/queue-token/queue-token.manger';
 
+/**
+ * AuthService
+ * - 토큰 생성
+ * - 토큰 갱신
+ * - JWT 토큰 디코딩
+ * - 대기열 토큰 생성
+ * - 토큰 상태 확인
+ * - 만료된 토큰 처리
+ */
 @Injectable()
 export class AuthService {
   constructor(
-    @Inject('USER_REPOSITORY')
-    private usersRepository: Repository<User>,
     @Inject('AUTH_REPOSITORY')
     private authRepository: Repository<Auth>,
+    // @Inject(QueueTokenManager)
+    // private readonly queueTokenManager: QueueTokenManager,
 
-    private usersService: UsersService,
     private jwtService: JwtService,
   ) {}
+  private queue: string[] = []; // index of queue
+  private idAndTokenExpiryMap: Map<string, number> = new Map(); // token of userId
+  private readonly MAX_PROCESSABLE = 50;
 
-  private queue: string[] = [];
-  private idAndTokenExpiryMap: Map<string, number> = new Map();
-  private lock = new AsyncLock();
-  private readonly MAX_WAITING_SIZE = 50;
+  isInQueue(userId: string): boolean {
+    return this.queue.includes(userId);
+  }
 
-  async signup(body: Partial<User>) {
-    const { email, password } = body;
-    const users = await this.usersService.findAll({ email });
-
-    if (users.length) {
-      throw new NotAcceptableException('Email is not available');
+  enqueueUser(userId: string) {
+    if (!this.queue.includes(userId)) {
+      this.queue.push(userId);
     }
+  }
 
-    const hashedPassword = await this.transformPassword(password);
+  getQueuePayload(userId: string) {
+    const myQueue = this.queue.indexOf(userId);
+    const batchesAhead = Math.floor(myQueue / this.MAX_PROCESSABLE);
+    const remainingMinute = batchesAhead * 3; // 각 배치당 3분 가정
+    return { userId, myQueue, remainingMinute };
+  }
 
-    return await this.usersService.create({
-      ...body,
-      password: hashedPassword,
+  getExpiredUserIds() {
+    const currentTime = new Date().getTime();
+    return Array.from(this.idAndTokenExpiryMap)
+      .filter(([_, expiryTime]) => currentTime >= expiryTime)
+      .map(([userId, _]) => userId);
+  }
+
+  removeExpiredUsers(expiredUserIds: string[]) {
+    expiredUserIds.forEach((userId) => {
+      this.queue = this.queue.filter((id) => id !== userId);
+      this.idAndTokenExpiryMap.delete(userId);
     });
   }
 
-  async transformPassword(password: string): Promise<string> {
-    const saltRounds = 10;
-    return bcrypt.hash(password, saltRounds);
+  //---------------------------------------------
+  // 토큰 생성
+  private createToken(payload: object | Buffer, expiresIn: string): string {
+    return this.jwtService.sign(payload, { expiresIn });
   }
 
-  async signin({ email, password }: Partial<User>) {
-    const [user] = await this.usersService.findAll({ email });
-    if (!user) throw new NotAcceptableException('User not found');
+  // 토큰 갱신
+  async refreshAccessToken(
+    refreshToken: string,
+  ): Promise<{ access_token: string; refresh_token: string }> {
+    try {
+      const user = this.jwtService.verify(refreshToken);
+      const accessToken = this.createToken(
+        { username: user.username, sub: user.id },
+        '15m',
+      );
+      const newRefreshToken = this.createToken(
+        { username: user.username, sub: user.id },
+        '7d',
+      );
 
-    const passwordMatch = await bcrypt.compare(password, user.password);
-
-    if (passwordMatch) {
-      const payload = { username: user.username, sub: user.id };
-      const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
-      const accessToken = this.jwtService.sign(payload, { expiresIn: '15m' });
-
-      await this.saveRefreshToken(user.id, refreshToken);
+      // 리프레시 토큰을 데이터베이스에 저장
+      await this.authRepository.save({
+        userId: user.id,
+        refreshToken: newRefreshToken,
+      });
 
       return {
         access_token: accessToken,
-        refresh_token: refreshToken,
+        refresh_token: newRefreshToken,
       };
-    } else {
-      throw new BadRequestException(
-        'Please check your email address and password',
-      );
-    }
-  }
-
-  async refreshAccessToken(refreshToken: string) {
-    try {
-      const user = this.jwtService.verify(refreshToken);
-      const accessToken = this.jwtService.sign(
-        { username: user.username, sub: user.id },
-        { expiresIn: '15m' },
-      );
-
-      return { access_token: accessToken };
     } catch (e) {
-      throw new BadRequestException('Invalid refresh token');
+      throw new BadRequestException('Invalid refresh token 🚫');
     }
   }
 
-  private async saveRefreshToken(userId: string, refreshToken: string) {
-    await this.usersRepository.update(userId, { refreshToken });
-  }
-
-  decodeQueueToken(token: string) {
+  // JWT 토큰 디코딩
+  decodeQueueToken(token: string): any {
     return this.jwtService.verify(token, { secret: jwtConstants.secret });
   }
 
-  // ----------------------------------------------------------------
-  // Queue management
-  inQueue(userId: string): boolean {
-    if (!this.queue.includes(userId)) {
-      this.queue.push(userId);
-      return true;
-    } else {
-      return false;
-    }
-  }
-
-  getRemainQueueSize(userId: string): number {
-    const sizeLeft = this.queue.indexOf(userId) - this.MAX_WAITING_SIZE;
-    if (sizeLeft < 1) return 0;
-    return sizeLeft;
-  }
-
-  outQueue(userId?: string) {
-    if (userId) {
-      const index = this.queue.indexOf(userId);
-      if (index > -1) {
-        this.queue.splice(index, 1);
-      }
-    } else {
-      this.queue.shift();
-    }
-  }
-
-  /** 대기 큐 토큰 발급 */
+  // 대기열 토큰 생성
   async generateQueueToken(userId: string) {
-    try {
-      return this.lock.acquire('queue-lock', async () => {
-        if (this.queue.includes(userId)) {
-          throw new BadRequestException('User already has a queue token');
-        }
+    return await this.authRepository.manager.transaction(
+      async (transactionalEntityManager) => {
+        if (this.isInQueue(userId))
+          throw new BadRequestException('User already in queue 🚫');
 
-        this.inQueue(userId);
-        const myQueue = this.queue.indexOf(userId);
-        const remainQueueSize = this.getRemainQueueSize(userId);
-        const remainingMinute = remainQueueSize * 3;
-        const payload = {
-          userId,
-          myQueue,
-          remainingMinute,
-        };
+        this.enqueueUser(userId);
+        const payload = this.getQueuePayload(userId);
+        const queueToken = this.createToken(payload, '5m');
 
-        const expiresIn = 5 * 60 * 1000;
-        const expiryTime = new Date().getTime() + expiresIn;
-
-        this.idAndTokenExpiryMap.set(userId, expiryTime);
-
-        const queueToken = this.jwtService.sign(payload, { expiresIn: '5m' });
-
-        await this.authRepository.save({
-          userId,
-          queueToken,
-        });
-
-        return {
-          queue_token: queueToken,
-          remainQueueSize,
-          remainingMinute,
-          myQueue,
-        };
-      });
-    } catch (e) {
-      console.error('Error acquiring lock in generateQueueToken:', e);
-      throw new BadRequestException('Error processing request');
-    }
+        await transactionalEntityManager.save(Auth, { userId, queueToken });
+        return this.getQueuePayload(userId);
+      },
+    );
   }
 
-  /** 토큰 확인 */
+  // 토큰 상태 확인
   checkQueueTokenStatus(token: string) {
     try {
       const decoded = this.decodeQueueToken(token);
-
-      const myQueue = this.queue.indexOf(decoded.userId);
-      const remainQueueSize = this.getRemainQueueSize(decoded.userId);
-
-      return {
-        remainQueueSize,
-        remainingMinute: remainQueueSize * 3,
-        myQueue,
-      };
+      return this.getQueuePayload(decoded.userId);
     } catch (e) {
-      throw new BadRequestException(e.message);
+      throw new BadRequestException('Invalid queue token 🚫');
     }
   }
 
-  /** 만료 토큰 삭제 */
-  @Cron('*/2 * * * * *')
+  // 만료된 토큰 처리
+  @Cron('*/5 * * * * *')
   async handleExpiredQueueTokens() {
-    try {
-      await this.lock.acquire('queue-lock', async () => {
-        const currentTime = new Date().getTime();
-        const expiredUserIds: string[] = [];
-
-        this.idAndTokenExpiryMap.forEach((expiryTime, userId) => {
-          if (currentTime >= expiryTime) {
-            expiredUserIds.push(userId);
-          }
+    await this.authRepository.manager.transaction(
+      async (transactionalEntityManager) => {
+        const expiredUserIds = this.getExpiredUserIds();
+        const expiredAuths = await transactionalEntityManager.find(Auth, {
+          where: { userId: In(expiredUserIds) },
         });
 
-        if (expiredUserIds.length > 0) {
-          const expiredAuths = await this.authRepository.find({
-            where: { userId: In(expiredUserIds) },
-          });
-          for (const auth of expiredAuths) {
-            await this.authRepository.remove(auth);
-          }
-        }
-
-        expiredUserIds.forEach((userId) => {
-          this.outQueue(userId);
-          this.idAndTokenExpiryMap.delete(userId);
-        });
-      });
-    } catch (e) {
-      console.error('Error acquiring lock in handleExpiredQueueTokens:', e);
-    }
+        await Promise.all(
+          expiredAuths.map((auth) => transactionalEntityManager.remove(auth)),
+        );
+        this.removeExpiredUsers(expiredUserIds);
+        console.log('Expired tokens cleaned up 🧹');
+      },
+    );
   }
 }
