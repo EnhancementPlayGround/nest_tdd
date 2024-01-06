@@ -3,7 +3,7 @@ import { INestApplication, NotFoundException } from '@nestjs/common';
 
 import { Order } from '@/entities/order.entity';
 import { mockOrderRepository, orderFixture } from '@test/orders/orders.fixture';
-import { OrdersService } from './orders.service';
+import { OrdersService } from '@/orders/orders.service';
 
 describe('OrdersService', () => {
   let service: OrdersService;
@@ -89,16 +89,16 @@ describe('OrdersService', () => {
       const orderId = 'exampleOrderId';
       mockOrderRepository.findOneBy.mockResolvedValue(order);
 
-      const result = await service.findOrderById(orderId);
+      const result = await service.findOneOrderOrFail(orderId);
 
       expect(result).toEqual(order);
     });
 
     it('should return null for non-existing order', async () => {
       const orderId = 'nonExistentOrderId';
-      jest.spyOn(service, 'findOrderById').mockResolvedValue(null);
+      jest.spyOn(service, 'findOneOrderOrFail').mockResolvedValue(null);
 
-      const result = await service.findOrderById(orderId);
+      const result = await service.findOneOrderOrFail(orderId);
 
       expect(result).toBeNull();
     });
@@ -133,7 +133,7 @@ describe('OrdersService', () => {
       const updateOrderDto = {
         status: 'pending',
       };
-      jest.spyOn(service, 'findOrderById').mockResolvedValue(null);
+      jest.spyOn(service, 'findOneOrderOrFail').mockResolvedValue(null);
 
       await expect(
         service.updateOrder(orderId, updateOrderDto),
@@ -144,19 +144,19 @@ describe('OrdersService', () => {
   describe('remove Order', () => {
     it('should delete an existing order', async () => {
       const orderId = 'exampleOrderId';
-      jest.spyOn(service, 'findOrderById').mockResolvedValue(order);
+      jest.spyOn(service, 'findOneOrderOrFail').mockResolvedValue(order);
       mockOrderRepository.remove.mockResolvedValue({ affected: 1 });
 
       await service.deleteOrder(orderId);
 
-      expect(service.findOrderById).toHaveBeenCalledWith(orderId);
+      expect(service.findOneOrderOrFail).toHaveBeenCalledWith(orderId);
       expect(mockOrderRepository.remove).toHaveBeenCalledWith(order);
     });
 
     it('should throw an exception for non-existing order', async () => {
       const orderId = 'nonExistentOrderId';
 
-      jest.spyOn(service, 'findOrderById').mockResolvedValue(null);
+      jest.spyOn(service, 'findOneOrderOrFail').mockResolvedValue(null);
 
       await expect(service.deleteOrder(orderId)).rejects.toThrow(
         NotFoundException,

@@ -24,25 +24,24 @@ export class OrdersService {
     return await this.ordersRepository.find();
   }
 
-  async findOrderById(id: string): Promise<Order | null> {
-    return await this.ordersRepository.findOneBy({ id });
+  async findOneOrderOrFail(id: string): Promise<Order | null> {
+    const order = await this.ordersRepository.findOneBy({ id });
+    if (!order) throw new NotFoundException(`Order ${id} not found`);
+    return order;
   }
 
   async updateOrder(
     id: string,
     updateOrderDto: UpdateOrderDto,
   ): Promise<Order> {
-    const order = await this.findOrderById(id);
-    if (!order) throw new NotFoundException(`Order ${id} not found`);
-
+    const order = await this.findOneOrderOrFail(id);
     Object.assign(order, updateOrderDto);
 
     return await this.ordersRepository.save(order);
   }
 
   async deleteOrder(id: string) {
-    const order = await this.findOrderById(id);
-    if (!order) throw new NotFoundException(`Order ${id} not found`);
+    const order = await this.findOneOrderOrFail(id);
     this.ordersRepository.remove(order);
   }
 }
