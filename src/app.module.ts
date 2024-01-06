@@ -11,6 +11,7 @@ import { AuthModule } from './auth/auth.module';
 import { HealthModule } from './health/health.module';
 import { UsersModule } from './users/users.module';
 import { ReservationsModule } from './reservations/reservations.module';
+import { OrdersModule } from './orders/orders.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { ReservationsModule } from './reservations/reservations.module';
     AuthModule,
     UsersModule,
     ReservationsModule,
+    OrdersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

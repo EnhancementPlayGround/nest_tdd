@@ -9,6 +9,7 @@ import { AuthController } from './auth.controller';
 import { authProviders } from './auth.providers';
 import { UsersModule } from '@/users/users.module';
 import { ReservationsModule } from '@/reservations/reservations.module';
+import { usersProviders } from '@/users/users.providers';
 
 @Module({
   imports: [
@@ -21,7 +22,7 @@ import { ReservationsModule } from '@/reservations/reservations.module';
       signOptions: { expiresIn: '1h' },
     }),
   ],
-  providers: [...authProviders, AuthService, JwtStrategy],
+  providers: [...authProviders, AuthService, JwtStrategy, ...usersProviders],
   controllers: [AuthController],
 })
 export class AuthModule {}
