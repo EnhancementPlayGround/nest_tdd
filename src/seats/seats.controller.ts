@@ -13,7 +13,7 @@ import {
 } from '@nestjs/common';
 import { SeatsService } from './seats.service';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { JwtAuthGuard } from '@/utils/jwt/jwt-auth.guards';
+import { JwtAuthGuard } from '@/auth/jwt/jwt-auth.guards';
 import { Seats } from '@/entities/seats.entity';
 
 @Controller('seats')

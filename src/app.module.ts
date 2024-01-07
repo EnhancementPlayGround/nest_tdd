@@ -9,12 +9,13 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { HealthModule } from './health/health.module';
-import { UsersModule } from './users/users.module';
 import { SeatsModule } from './seats/seats.module';
 
 @Module({
   imports: [
     HealthModule,
+    AuthModule,
+    SeatsModule,
     ConfigModule.forRoot({
       isGlobal: true,
       validationSchema: Joi.object({
@@ -27,9 +28,6 @@ import { SeatsModule } from './seats/seats.module';
       envFilePath: `src/config/env/.${process.env.NODE_ENV}.env`,
     }),
     ScheduleModule.forRoot(),
-    AuthModule,
-    UsersModule,
-    SeatsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

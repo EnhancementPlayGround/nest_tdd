@@ -8,6 +8,8 @@ import { Repository } from 'typeorm';
 import { SerializeInterceptor } from '@/interceptors/serialize.interceptor';
 
 import { User } from '@/entities/user.entity';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 @UseInterceptors(SerializeInterceptor)
@@ -17,7 +19,7 @@ export class UsersService {
     private userRepository: Repository<User>,
   ) {}
 
-  async create(body: Partial<User>): Promise<User> {
+  async create(body: CreateUserDto): Promise<User> {
     const result = this.userRepository.create({
       ...body,
       createdAt: new Date(),
@@ -47,7 +49,7 @@ export class UsersService {
     return queryBuilder.getMany();
   }
 
-  async update(id: string, attr: Partial<User>): Promise<User> {
+  async update(id: string, attr: UpdateUserDto): Promise<User> {
     const user = await this.userRepository.findOneBy({ id });
     if (!user) throw new NotFoundException(`User ${id} not found`);
 

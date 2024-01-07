@@ -4,7 +4,8 @@ import { JwtService } from '@nestjs/jwt';
 import { Cron } from '@nestjs/schedule';
 import { jwtConstants } from '@/constatns/jwt';
 import { Auth } from '@/entities/auth.entity';
-// import { QueueTokenManager } from '@/auth/queue-token/queue-token.manger';
+import { QueueTokenManager } from './queue-token/queue-token.manger';
+import { User } from '@/entities/user.entity';
 
 /**
  * AuthService
@@ -20,8 +21,10 @@ export class AuthService {
   constructor(
     @Inject('AUTH_REPOSITORY')
     private authRepository: Repository<Auth>,
-    // @Inject(QueueTokenManager)
-    // private readonly queueTokenManager: QueueTokenManager,
+    @Inject('USER_REPOSITORY')
+    private userRepository: Repository<User>,
+    @Inject(QueueTokenManager)
+    private readonly queueTokenManager: QueueTokenManager,
 
     private jwtService: JwtService,
   ) {}
@@ -129,7 +132,7 @@ export class AuthService {
   }
 
   // 만료된 토큰 처리
-  @Cron('*/5 * * * * *')
+  @Cron('0 0/5 * * * *')
   async handleExpiredQueueTokens() {
     await this.authRepository.manager.transaction(
       async (transactionalEntityManager) => {
