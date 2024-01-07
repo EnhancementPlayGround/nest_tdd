@@ -12,7 +12,13 @@
     "outDir": "./dist",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@modules/*": ["src/domains/*"],
+      "@entities/*": ["src/entities/*"],
+      "@interceptors/*": ["src/interceptors/*"],
+      "@common/*": ["src/utils/*"],
+      "@config/*": ["src/config/*"],
+      "@dtos/*": ["src/dtos/*"]
     },
     "incremental": true,
     "skipLibCheck": true,

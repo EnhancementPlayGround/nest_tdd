@@ -7,9 +7,9 @@ import configuration from './config/configuration';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { AuthModule } from './auth/auth.module';
-import { HealthModule } from './health/health.module';
-import { SeatsModule } from './seats/seats.module';
+import { AuthModule } from './domains/auth/auth.module';
+import { HealthModule } from './domains/health/health.module';
+import { SeatsModule } from './domains/seats/seats.module';
 
 @Module({
   imports: [
