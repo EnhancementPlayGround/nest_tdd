@@ -13,12 +13,13 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"],
-      "@modules/*": ["src/domains/*"],
+      "@domains/*": ["src/domains/*"],
       "@entities/*": ["src/entities/*"],
       "@interceptors/*": ["src/interceptors/*"],
       "@common/*": ["src/utils/*"],
       "@config/*": ["src/config/*"],
-      "@dtos/*": ["src/dtos/*"]
+      "@dtos/*": ["src/dtos/*"],
+      "@test/*": ["test/*"]
     },
     "incremental": true,
     "skipLibCheck": true,

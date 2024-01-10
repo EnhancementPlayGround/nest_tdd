@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import { BadRequestException } from '@nestjs/common';
 
-import { AuthService } from '../../src/domains/auth/auth.service';
+import { AuthService } from '@domains/auth/auth.service';
 
 const mockJwtService = { sign: jest.fn(), verify: jest.fn() };
 const mockAuthRepository = {

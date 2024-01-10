@@ -89,7 +89,7 @@
     "rootDir": "./src",
     "moduleNameMapper": {
       "^@/(.*)$": "<rootDir>/$1",
-      "^@modules/(.*)$": "<rootDir>/modules/$1",
+      "^@domains/(.*)$": "<rootDir>/domains/$1",
       "^@entities/(.*)$": "<rootDir>/entities/$1",
       "^@interceptors/(.*)$": "<rootDir>/interceptors/$1",
       "^@common/(.*)$": "<rootDir>/common/$1",
@@ -104,7 +104,7 @@
       "^.+\\.(t|j)s$": "ts-jest"
     },
     "collectCoverageFrom": [
-      "**/*.(t|j)s"
+      "src/**/*.(t|j)s"
     ],
     "coveragePathIgnorePatterns": [
       ".*\\.dto\\.ts$",
