@@ -7,15 +7,15 @@ import configuration from './config/configuration';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { AuthModule } from './auth/auth.module';
-import { HealthModule } from './health/health.module';
-import { UsersModule } from './users/users.module';
-import { ReservationsModule } from './reservations/reservations.module';
-import { OrdersModule } from './orders/orders.module';
+import { AuthModule } from './domains/auth/auth.module';
+import { HealthModule } from './domains/health/health.module';
+import { SeatsModule } from './domains/seats/seats.module';
 
 @Module({
   imports: [
     HealthModule,
+    AuthModule,
+    SeatsModule,
     ConfigModule.forRoot({
       isGlobal: true,
       validationSchema: Joi.object({
@@ -28,10 +28,6 @@ import { OrdersModule } from './orders/orders.module';
       envFilePath: `src/config/env/.${process.env.NODE_ENV}.env`,
     }),
     ScheduleModule.forRoot(),
-    AuthModule,
-    UsersModule,
-    ReservationsModule,
-    OrdersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

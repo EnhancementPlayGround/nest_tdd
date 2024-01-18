@@ -1,12 +1,4 @@
-import {
-  Entity,
-  Column,
-  PrimaryGeneratedColumn,
-  AfterInsert,
-  AfterUpdate,
-  AfterRemove,
-  Index,
-} from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, Index } from 'typeorm';
 
 @Entity('user')
 export class User {
@@ -31,17 +23,4 @@ export class User {
 
   @Column({ nullable: true, name: 'refresh_token' })
   refreshToken: string;
-
-  @AfterInsert()
-  logInsert() {
-    console.log(`Inserted User, id: ${this.id}`);
-  }
-  @AfterUpdate()
-  logUpdate() {
-    console.log(`Updated User, id: ${this.id}`);
-  }
-  @AfterRemove()
-  logRemove() {
-    console.log(`Removed User, id: ${this.id}`);
-  }
 }

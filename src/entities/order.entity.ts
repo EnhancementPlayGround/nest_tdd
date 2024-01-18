@@ -7,7 +7,7 @@ import {
   OneToOne,
 } from 'typeorm';
 import { User } from './user.entity';
-import { Reservations } from './reservations.entity';
+import { Seats } from './seats.entity';
 
 @Entity('order')
 export class Order {
@@ -27,7 +27,7 @@ export class Order {
   @Column('uuid', { name: 'user_id' })
   userId: string;
 
-  @OneToOne(() => Reservations)
+  @OneToOne(() => Seats)
   @Column({ name: 'reservation_id' })
   reservationId: string;
 

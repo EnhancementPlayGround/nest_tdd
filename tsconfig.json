@@ -13,6 +13,12 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"],
+      "@domains/*": ["src/domains/*"],
+      "@entities/*": ["src/entities/*"],
+      "@interceptors/*": ["src/interceptors/*"],
+      "@common/*": ["src/utils/*"],
+      "@config/*": ["src/config/*"],
+      "@dtos/*": ["src/dtos/*"],
       "@test/*": ["test/*"]
     },
     "incremental": true,
