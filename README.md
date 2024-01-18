@@ -1,5 +1,9 @@
 # Nest TDD Project
 
+=> 1월 13일 이후 chapter 1, 3, 4는 https://github.com/dusunax/search 에서 진행합니다.
+
+---
+
 ## [Chapter 2] TDD 서버구축
 
 > **학습기간**
